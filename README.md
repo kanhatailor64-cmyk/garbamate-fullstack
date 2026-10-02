@@ -50,3 +50,13 @@ In your Vercel Project Settings > Environment Variables:
 - `ADMIN_EMAIL`: Email of admin user (enables `/api/admin/reports` and ban features).
 - `TURSO_DATABASE_URL`: (Recommended for production persistence) e.g., `libsql://your-db.turso.io`.
 - `TURSO_AUTH_TOKEN`: Auth token from Turso.
+
+---
+
+## Credits
+Crafted with ❤️ for Navratri by:
+- **Athrva tailor**
+- **Varshith reddy**
+- **Anuvesha rastogi**
+- **Viraj salunkhe (oreo)**
+

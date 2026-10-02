@@ -3,3 +3,4 @@ garbamate.db*
 .vercel
 .DS_Store
 .env
+.env*
