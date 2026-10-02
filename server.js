@@ -152,8 +152,14 @@ app.post('/api/register', rate, async (req, res) => {
 app.post('/api/login', rate, async (req, res) => {
   const email = str(req.body.email, 120).toLowerCase();
   const u = await db.get('SELECT * FROM users WHERE email=? AND demo=0', [email]);
-  if (!u || u.banned || !bcrypt.compareSync(String(req.body.password || ''), u.pw)) {
-    return res.status(401).json({ error: 'Wrong email or password.' });
+  if (!u) {
+    return res.status(401).json({ error: 'No account found with this email. Please click "Sign Up" to create an account.' });
+  }
+  if (u.banned) {
+    return res.status(403).json({ error: 'This account has been suspended.' });
+  }
+  if (!bcrypt.compareSync(String(req.body.password || ''), u.pw)) {
+    return res.status(401).json({ error: 'Wrong password. Please try again.' });
   }
   res.json({ token: sign(u) });
 });

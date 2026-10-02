@@ -26,19 +26,38 @@ fill('#state', STATES, 'State'); fill('#skill', SKILLS); fill('#style', STYLES);
 fill('#fState', STATES, 'Any state'); fill('#fSkill', SKILLS, 'Any skill'); fill('#fStyle', STYLES, 'Any style');
 
 /* ---------- auth ---------- */
-$('#toggle').onclick = () => {
-  signup = !signup;
+function setAuthMode(isSignup) {
+  signup = isSignup;
+  if ($('#tabLogin')) $('#tabLogin').classList.toggle('active', !signup);
+  if ($('#tabSignup')) $('#tabSignup').classList.toggle('active', signup);
   $('#signupFields').classList.toggle('hidden', !signup);
   $('#authBtn').textContent = signup ? 'Create account' : 'Log in';
-  $('#toggle').textContent = signup ? 'Already have an account? Log in' : 'New here? Create account';
-};
+  $('#toggle').textContent = signup ? 'Already have an account? Log in' : "Don't have an account? Sign up";
+  $('#err').textContent = '';
+}
+
+if ($('#tabLogin')) $('#tabLogin').onclick = () => setAuthMode(false);
+if ($('#tabSignup')) $('#tabSignup').onclick = () => setAuthMode(true);
+$('#toggle').onclick = () => setAuthMode(!signup);
+
+const savedEmail = localStorage.getItem('gm_last_email');
+if (savedEmail) $('#email').value = savedEmail;
+
+if (sessionStorage.getItem('gm_logged_out')) {
+  sessionStorage.removeItem('gm_logged_out');
+  setTimeout(() => toast('You have been logged out.'), 300);
+}
+
 $('#authForm').onsubmit = async e => {
   e.preventDefault();
   const body = { email: $('#email').value, password: $('#password').value };
   if (signup) Object.assign(body, { name: $('#name').value, age: +$('#age').value, gender: $('#gender').value, college: $('#college').value, city: $('#city').value, state: $('#state').value, skill: $('#skill').value, style: $('#style').value, bio: $('#bio').value });
   try {
     token = (await api(signup ? '/register' : '/login', 'POST', body)).token;
-    localStorage.setItem('gm_token', token); $('#err').textContent = ''; await boot();
+    localStorage.setItem('gm_token', token);
+    localStorage.setItem('gm_last_email', body.email);
+    $('#err').textContent = '';
+    await boot();
   } catch (x) { $('#err').textContent = x.message; }
 };
 async function boot() {
@@ -59,7 +78,11 @@ async function boot() {
   }
   tab('discover'); await load();
 }
-const logout = () => { localStorage.removeItem('gm_token'); location.reload(); };
+const logout = () => {
+  localStorage.removeItem('gm_token');
+  sessionStorage.setItem('gm_logged_out', '1');
+  location.reload();
+};
 
 /* ---------- deck ---------- */
 async function load() {
