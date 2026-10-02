@@ -330,7 +330,7 @@ app.post('/api/admin/ban/:id', auth, admin, async (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/admin/stats', auth, admin, async (req, res) => {
+app.get(['/api/stats', '/api/admin/stats'], auth, async (req, res) => {
   const boys = await db.all("SELECT id, name, college, city FROM users WHERE gender='Male' AND banned=0 ORDER BY name");
   const girls = await db.all("SELECT id, name, college, city FROM users WHERE gender='Female' AND banned=0 ORDER BY name");
   const others = await db.all("SELECT id, name, college, city FROM users WHERE gender='Other' AND banned=0 ORDER BY name");

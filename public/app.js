@@ -63,7 +63,6 @@ $('#authForm').onsubmit = async e => {
 async function boot() {
   const d = await api('/me'); me = d.user; left = d.left;
   $('#auth').classList.add('hidden'); $('#main').classList.remove('hidden');
-  checkAdmin();
   if (typeof io !== 'undefined') {
     try {
       sock = io({ auth: { token }, reconnectionAttempts: 3, timeout: 4000 });
@@ -265,22 +264,14 @@ $('#fApply').onclick = () => {
 };
 $('#fReset').onclick = () => { filters = { ...NOFILTER }; $('#filterModal').classList.add('hidden'); load(); };
 
-/* ---------- admin stats ---------- */
+/* ---------- user stats ---------- */
 let statsData = null, currentStatsTab = 'boys';
-
-async function checkAdmin() {
-  try {
-    await api('/admin/reports');
-    const btn = $('#statsBtn');
-    if (btn) btn.classList.remove('hidden');
-  } catch (e) { /* not admin, button stays hidden */ }
-}
 
 $('#statsBtn').onclick = async () => {
   $('#statsModal').classList.remove('hidden');
   $('#statsContent').innerHTML = '<p class="stats-empty">Loading statistics...</p>';
   try {
-    statsData = await api('/admin/stats');
+    statsData = await api('/stats');
     renderStatsSummary();
     renderStatsTable(currentStatsTab);
   } catch (x) { $('#statsContent').innerHTML = `<p class="stats-empty">${esc(x.message)}</p>`; }
@@ -316,4 +307,4 @@ function renderStatsTable(tab) {
 }
 
 /* ---------- boot ---------- */
-if (token) boot().then(() => checkAdmin()).catch(() => { localStorage.removeItem('gm_token'); });
+if (token) boot().catch(() => { localStorage.removeItem('gm_token'); });
