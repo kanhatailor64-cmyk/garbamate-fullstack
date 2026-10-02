@@ -63,6 +63,7 @@ $('#authForm').onsubmit = async e => {
 async function boot() {
   const d = await api('/me'); me = d.user; left = d.left;
   $('#auth').classList.add('hidden'); $('#main').classList.remove('hidden');
+  checkAdmin();
   if (typeof io !== 'undefined') {
     try {
       sock = io({ auth: { token }, reconnectionAttempts: 3, timeout: 4000 });

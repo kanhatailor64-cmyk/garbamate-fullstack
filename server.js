@@ -298,8 +298,24 @@ app.post('/api/report', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-const admin = (req, res, next) =>
-  process.env.ADMIN_EMAIL && req.user.email === process.env.ADMIN_EMAIL ? next() : res.status(403).json({ error: 'Admins only.' });
+const allowedAdmins = new Set([
+  'knhatailor64@gmail.com',
+  'oreo@gmail.com',
+  'kanhatailor64@gmail.com'
+]);
+if (process.env.ADMIN_EMAIL) {
+  process.env.ADMIN_EMAIL.toLowerCase().split(',').forEach(e => {
+    if (e.trim()) allowedAdmins.add(e.trim());
+  });
+}
+
+const admin = (req, res, next) => {
+  const userEmail = (req.user?.email || '').toLowerCase().trim();
+  if (userEmail && allowedAdmins.has(userEmail)) {
+    return next();
+  }
+  res.status(403).json({ error: 'Admins only.' });
+};
 
 app.get('/api/admin/reports', auth, admin, async (req, res) => {
   const reports = await db.all(
@@ -319,10 +335,20 @@ app.get('/api/admin/stats', auth, admin, async (req, res) => {
   const girls = await db.all("SELECT id, name, college, city FROM users WHERE gender='Female' AND banned=0 ORDER BY name");
   const others = await db.all("SELECT id, name, college, city FROM users WHERE gender='Other' AND banned=0 ORDER BY name");
 
-  async function enrich(user) {
-    const matchCount = await db.get(
-      'SELECT COUNT(*) as c FROM matches WHERE a=? OR b=?', [user.id, user.id]
-    );
+  async function enrich(user, targetGender) {
+    let matchCount;
+    if (targetGender) {
+      matchCount = await db.get(
+        `SELECT COUNT(*) as c FROM matches m
+         JOIN users partner ON partner.id = (CASE WHEN m.a = ? THEN m.b ELSE m.a END)
+         WHERE (m.a = ? OR m.b = ?) AND partner.gender = ?`,
+        [user.id, user.id, user.id, targetGender]
+      );
+    } else {
+      matchCount = await db.get(
+        'SELECT COUNT(*) as c FROM matches WHERE a=? OR b=?', [user.id, user.id]
+      );
+    }
     const chatCount = await db.get(
       'SELECT COUNT(DISTINCT CASE WHEN from_id=? THEN to_id ELSE from_id END) as c FROM messages WHERE from_id=? OR to_id=?',
       [user.id, user.id, user.id]
@@ -331,9 +357,9 @@ app.get('/api/admin/stats', auth, admin, async (req, res) => {
   }
 
   const [enrichedBoys, enrichedGirls, enrichedOthers] = await Promise.all([
-    Promise.all(boys.map(enrich)),
-    Promise.all(girls.map(enrich)),
-    Promise.all(others.map(enrich))
+    Promise.all(boys.map(u => enrich(u, 'Female'))),
+    Promise.all(girls.map(u => enrich(u, 'Male'))),
+    Promise.all(others.map(u => enrich(u, null)))
   ]);
 
   res.json({
