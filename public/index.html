@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GarbaMate</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;800&family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- AUTH -->
+  <section id="auth" class="screen">
+    <div class="logo">🪔 GarbaMate</div>
+    <p class="tag">Find your Garba partner on campus</p>
+    <form id="authForm">
+      <div id="signupFields" class="hidden">
+        <input id="name" placeholder="Full name">
+        <input id="age" type="number" min="18" placeholder="Age (18+ only)">
+        <select id="gender"><option>Female</option><option>Male</option><option>Other</option></select>
+        <input id="college" placeholder="College name">
+        <input id="city" placeholder="City">
+        <select id="state"></select>
+        <select id="skill"></select>
+        <select id="style"></select>
+        <input id="bio" maxlength="150" placeholder="Short bio (max 150 chars)">
+      </div>
+      <input id="email" type="email" placeholder="Email" required>
+      <input id="password" type="password" placeholder="Password (min 6)" required>
+      <p id="err" class="err"></p>
+      <button class="btn" id="authBtn">Log in</button>
+      <p class="switch" id="toggle">New here? Create account</p>
+    </form>
+  </section>
+
+  <!-- MAIN -->
+  <section id="main" class="screen hidden">
+    <header><span class="logo sm">🪔 GarbaMate</span><button id="filterBtn" class="chip">Filters</button></header>
+    <main>
+      <div id="tab-discover" class="tab">
+        <div id="deck"></div>
+        <div class="actions">
+          <button id="bUndo" class="round sm">↩</button>
+          <button id="bPass" class="round x">✕</button>
+          <button id="bSuper" class="round sm star">★</button>
+          <button id="bLike" class="round heart">♥</button>
+        </div>
+        <p id="counter"></p>
+      </div>
+      <div id="tab-matches" class="tab hidden"></div>
+      <div id="tab-profile" class="tab hidden"></div>
+    </main>
+    <nav>
+      <button data-tab="discover" class="on">Discover</button>
+      <button data-tab="matches">Matches</button>
+      <button data-tab="profile">Profile</button>
+    </nav>
+  </section>
+
+  <!-- FILTERS -->
+  <div id="filterModal" class="modal hidden"><div class="box">
+    <h3>Filters</h3>
+    <select id="fState"></select>
+    <select id="fSkill"></select>
+    <select id="fStyle"></select>
+    <input id="fCollege" placeholder="College contains...">
+    <label class="row"><input type="checkbox" id="fSame"> Same college only</label>
+    <button class="btn" id="fApply">Apply</button>
+    <button class="btn ghost" id="fReset">Reset</button>
+  </div></div>
+
+  <!-- MATCH -->
+  <div id="matchModal" class="modal hidden"><div class="box center">
+    <h1>It's a Garba Match!</h1>
+    <div class="pair"><div id="mA"></div><div id="mB"></div></div>
+    <button class="btn" id="mChat">Send message</button>
+    <button class="btn ghost" id="mKeep">Keep swiping</button>
+  </div></div>
+
+  <!-- CHAT -->
+  <div id="chatModal" class="hidden">
+    <div class="chead"><button id="cBack" class="chip">←</button><b id="cName"></b>
+      <span><button id="cUnmatch" class="chip">Unmatch</button> <button id="cReport" class="chip">Report</button></span></div>
+    <div id="msgs"></div>
+    <form id="msgForm"><input id="msgIn" placeholder="Say hi, plan a Garba night..." autocomplete="off"><button class="btn">Send</button></form>
+  </div>
+
+  <div id="toast"></div>
+</div>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
