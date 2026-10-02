@@ -447,10 +447,6 @@ function renderProfile() {
   <button class="btn ghost" id="proTermsBtn" style="color:var(--maroon);border-color:var(--maroon);margin-top:6px">📜 Terms & Legal Disclaimer</button>
   <button class="btn ghost" id="logout" style="color:#5B0E2D;border-color:#5B0E2D">Log out</button>
   <button class="btn ghost" id="del" style="color:#D7263D;border-color:#D7263D">Delete account</button>
-  <div class="pro-credits">
-    <div class="pro-credits-title">🪔 GarbaMate Creators</div>
-    <div class="pro-credits-names">Athrva tailor • Varshith reddy • Anuvesha rastogi • Viraj salunkhe (oreo)</div>
-  </div>
   </div>`;
   
   if ($('#btnSavePq')) {
