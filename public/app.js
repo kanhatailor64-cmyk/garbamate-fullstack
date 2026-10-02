@@ -237,14 +237,6 @@ $('#msgForm').onsubmit = async e => {
       thread.push(res.message);
       drawMsgs();
     }
-    if (res.reply) {
-      setTimeout(() => {
-        if (chat && chat.id === res.reply.from_id && !thread.some(x => x.id === res.reply.id)) {
-          thread.push(res.reply);
-          drawMsgs();
-        }
-      }, 1200);
-    }
   } catch (x) { toast(x.message); }
 };
 const closeChat = () => {

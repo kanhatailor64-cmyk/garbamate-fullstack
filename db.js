@@ -57,8 +57,6 @@ const db = {
         photo TEXT,
         emoji TEXT DEFAULT '💃',
         hue INT,
-        demo INT DEFAULT 0,
-        likes_back INT DEFAULT 0,
         banned INT DEFAULT 0,
         undo_day TEXT
       );
@@ -70,29 +68,6 @@ const db = {
     await c.execute(`CREATE INDEX IF NOT EXISTS i_sw ON swipes(from_id, to_id);`);
     await c.execute(`CREATE INDEX IF NOT EXISTS i_msg ON messages(from_id, to_id);`);
     await c.execute(`CREATE INDEX IF NOT EXISTS i_col ON users(college, city);`);
-
-    const demoCheck = await c.execute('SELECT 1 FROM users WHERE demo=1 LIMIT 1');
-    if (demoCheck.rows.length === 0) {
-      const demos = [
-        ['Riya', 20, 'Female', 'Nirma University', 'Ahmedabad', 'Gujarat', 'Pro', 'Traditional Garba', 'Garba is my cardio. Dodhiyu queen.', '💃', 340],
-        ['Kabir', 21, 'Male', 'MS University', 'Vadodara', 'Gujarat', 'Intermediate', 'Dandiya Raas', 'Dandiya sticks ready, partner needed!', '🕺', 30],
-        ['Meera', 19, 'Female', 'Gujarat University', 'Ahmedabad', 'Gujarat', 'Beginner', 'Modern/Bollywood', 'First Navratri outside home, teach me!', '🪔', 280],
-        ['Aarav', 22, 'Male', 'Pune University', 'Pune', 'Maharashtra', 'Pro', 'Hudo', 'Hudo and chai lover.', '🥁', 200],
-        ['Ishita', 20, 'Female', 'SVNIT', 'Surat', 'Gujarat', 'Intermediate', 'Traditional Garba', 'Chaniya choli shopping buddy too.', '🌸', 320],
-        ['Dev', 21, 'Male', 'LNMIIT', 'Jaipur', 'Rajasthan', 'Beginner', 'Dandiya Raas', 'Two left feet, big heart.', '🎶', 120],
-        ['Naina', 19, 'Female', 'Mumbai University', 'Mumbai', 'Maharashtra', 'Intermediate', 'Modern/Bollywood', 'Bollywood garba nights!', '✨', 10],
-        ['Yash', 23, 'Male', 'Nirma University', 'Ahmedabad', 'Gujarat', 'Pro', 'Traditional Garba', 'Garba trainer, 3 years running.', '🔥', 160],
-        ['Tanvi', 20, 'Female', 'DAVV', 'Indore', 'Madhya Pradesh', 'Beginner', 'Dandiya Raas', 'Looking for a friendly Dandiya partner.', '🌼', 300],
-        ['Rohan', 22, 'Male', 'Delhi University', 'Delhi', 'Delhi', 'Intermediate', 'Dodhiyu', 'Delhi Navratri pandal explorer.', '🎉', 240]
-      ];
-      for (let i = 0; i < demos.length; i++) {
-        const d = demos[i];
-        await c.execute({
-          sql: 'INSERT INTO users(email,pw,name,age,gender,college,city,state,skill,style,bio,emoji,hue,demo,likes_back) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,1,?)',
-          args: [`demo${i + 1}@garbamate.local`, 'x', ...d, i % 4 !== 3 ? 1 : 0]
-        });
-      }
-    }
   },
 
   async get(sql, args = []) {

@@ -12,14 +12,6 @@ const LIMIT = 50;
 const STATES = ['Gujarat', 'Rajasthan', 'Maharashtra', 'Madhya Pradesh', 'Delhi', 'Haryana', 'Punjab', 'Uttar Pradesh', 'Karnataka', 'Other'];
 const SKILLS = ['Beginner', 'Intermediate', 'Pro'];
 const STYLES = ['Traditional Garba', 'Dandiya Raas', 'Dodhiyu', 'Hudo', 'Modern/Bollywood'];
-const REPLIES = [
-  'Haha yes! Which night are you free? 🪔',
-  'Love that! Dandiya Raas is my favourite 💃',
-  "Let's go in a group first 😄",
-  'Navratri nights are the best!',
-  'Which venue are you planning for?',
-  'Teach me Dodhiyu steps? 🙈'
-];
 
 /* ---------- helpers ---------- */
 const today = () => new Date().toISOString().slice(0, 10);
@@ -151,7 +143,7 @@ app.post('/api/register', rate, async (req, res) => {
 
 app.post('/api/login', rate, async (req, res) => {
   const email = str(req.body.email, 120).toLowerCase();
-  const u = await db.get('SELECT * FROM users WHERE email=? AND demo=0', [email]);
+  const u = await db.get('SELECT * FROM users WHERE email=?', [email]);
   if (!u) {
     return res.status(401).json({ error: 'No account found with this email. Please click "Sign Up" to create an account.' });
   }
@@ -229,14 +221,14 @@ app.post('/api/swipe', auth, async (req, res) => {
   const swipeRes = await db.run('INSERT OR IGNORE INTO swipes(from_id,to_id,type,day) VALUES(?,?,?,?)', [me.id, t.id, type, today()]);
   if (swipeRes.changes && type !== 'pass') {
     const back = await db.get("SELECT 1 FROM swipes WHERE from_id=? AND to_id=? AND type!='pass'", [t.id, me.id]);
-    if (back || t.likes_back) {
+    if (back) {
       const [a, b] = [me.id, t.id].sort((x, y) => x - y);
       await db.run('INSERT OR IGNORE INTO matches(a,b) VALUES(?,?)', [a, b]);
       match = true;
     }
   }
 
-  if (match && !t.demo) {
+  if (match) {
     try { io.to('u' + t.id).emit('match', pub(me)); } catch (e) {}
   }
   res.json({ match, user: match ? pub(t) : null, left: LIMIT - n - 1 });
@@ -294,16 +286,7 @@ app.post('/api/messages', auth, async (req, res) => {
   const ins = await db.run('INSERT INTO messages(from_id,to_id,text,t) VALUES(?,?,?,?)', [me.id, to, text, now]);
   const m = { id: ins.lastInsertRowid, from_id: me.id, to_id: to, text, t: now };
   try { io.to('u' + to).emit('msg', m); } catch (e) {}
-
-  let reply = null;
-  if (t.demo) {
-    const replyText = REPLIES[Math.floor(Math.random() * REPLIES.length)];
-    const rTime = Date.now() + 1200;
-    const r = await db.run('INSERT INTO messages(from_id,to_id,text,t) VALUES(?,?,?,?)', [to, me.id, replyText, rTime]);
-    reply = { id: r.lastInsertRowid, from_id: to, to_id: me.id, text: replyText, t: rTime };
-    try { setTimeout(() => io.to('u' + me.id).emit('msg', reply), 1200); } catch (e) {}
-  }
-  res.json({ message: m, reply });
+  res.json({ message: m });
 });
 
 /* ---------- safety + admin ---------- */
@@ -322,7 +305,7 @@ app.get('/api/admin/reports', auth, admin, async (req, res) => {
   const reports = await db.all(
     'SELECT r.*, u.name as against_name FROM reports r LEFT JOIN users u ON u.id=r.against_id ORDER BY r.id DESC LIMIT 100'
   );
-  const countRow = await db.get('SELECT COUNT(*) as c FROM users WHERE demo=0');
+  const countRow = await db.get('SELECT COUNT(*) as c FROM users');
   res.json({ reports, users: countRow ? countRow.c : 0 });
 });
 
