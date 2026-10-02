@@ -314,6 +314,38 @@ app.post('/api/admin/ban/:id', auth, admin, async (req, res) => {
   res.json({ ok: true });
 });
 
+app.get('/api/admin/stats', auth, admin, async (req, res) => {
+  const boys = await db.all("SELECT id, name, college, city FROM users WHERE gender='Male' AND banned=0 ORDER BY name");
+  const girls = await db.all("SELECT id, name, college, city FROM users WHERE gender='Female' AND banned=0 ORDER BY name");
+  const others = await db.all("SELECT id, name, college, city FROM users WHERE gender='Other' AND banned=0 ORDER BY name");
+
+  async function enrich(user) {
+    const matchCount = await db.get(
+      'SELECT COUNT(*) as c FROM matches WHERE a=? OR b=?', [user.id, user.id]
+    );
+    const chatCount = await db.get(
+      'SELECT COUNT(DISTINCT CASE WHEN from_id=? THEN to_id ELSE from_id END) as c FROM messages WHERE from_id=? OR to_id=?',
+      [user.id, user.id, user.id]
+    );
+    return { ...user, matches: matchCount?.c || 0, chats: chatCount?.c || 0 };
+  }
+
+  const [enrichedBoys, enrichedGirls, enrichedOthers] = await Promise.all([
+    Promise.all(boys.map(enrich)),
+    Promise.all(girls.map(enrich)),
+    Promise.all(others.map(enrich))
+  ]);
+
+  res.json({
+    boys: enrichedBoys,
+    girls: enrichedGirls,
+    others: enrichedOthers,
+    totalBoys: boys.length,
+    totalGirls: girls.length,
+    totalOthers: others.length
+  });
+});
+
 /* ---------- start / export ---------- */
 if (require.main === module && !process.env.VERCEL) {
   server.listen(PORT, () => console.log(`GarbaMate running on http://localhost:${PORT}`));

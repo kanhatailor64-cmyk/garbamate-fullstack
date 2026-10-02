@@ -264,5 +264,55 @@ $('#fApply').onclick = () => {
 };
 $('#fReset').onclick = () => { filters = { ...NOFILTER }; $('#filterModal').classList.add('hidden'); load(); };
 
+/* ---------- admin stats ---------- */
+let statsData = null, currentStatsTab = 'boys';
+
+async function checkAdmin() {
+  try {
+    await api('/admin/reports');
+    const btn = $('#statsBtn');
+    if (btn) btn.classList.remove('hidden');
+  } catch (e) { /* not admin, button stays hidden */ }
+}
+
+$('#statsBtn').onclick = async () => {
+  $('#statsModal').classList.remove('hidden');
+  $('#statsContent').innerHTML = '<p class="stats-empty">Loading statistics...</p>';
+  try {
+    statsData = await api('/admin/stats');
+    renderStatsSummary();
+    renderStatsTable(currentStatsTab);
+  } catch (x) { $('#statsContent').innerHTML = `<p class="stats-empty">${esc(x.message)}</p>`; }
+};
+
+$('#statsBack').onclick = () => $('#statsModal').classList.add('hidden');
+
+document.querySelectorAll('.stats-tab').forEach(b => b.onclick = () => {
+  currentStatsTab = b.dataset.stab;
+  document.querySelectorAll('.stats-tab').forEach(t => t.classList.toggle('active', t.dataset.stab === currentStatsTab));
+  renderStatsTable(currentStatsTab);
+});
+
+function renderStatsSummary() {
+  if (!statsData) return;
+  $('#statsSummary').innerHTML = `
+    <div class="stat-card"><div class="stat-num">${statsData.totalBoys}</div><div class="stat-label">🕺 Boys</div></div>
+    <div class="stat-card"><div class="stat-num">${statsData.totalGirls}</div><div class="stat-label">💃 Girls</div></div>
+    <div class="stat-card"><div class="stat-num">${statsData.totalBoys + statsData.totalGirls + statsData.totalOthers}</div><div class="stat-label">Total Users</div></div>`;
+}
+
+function renderStatsTable(tab) {
+  if (!statsData) return;
+  const users = statsData[tab] || [];
+  if (!users.length) {
+    $('#statsContent').innerHTML = `<p class="stats-empty">No ${tab} registered yet.</p>`;
+    return;
+  }
+  const matchLabel = tab === 'boys' ? 'Girls Matched' : tab === 'girls' ? 'Boys Matched' : 'Matched';
+  $('#statsContent').innerHTML = `<table class="stats-table"><thead><tr><th>Name</th><th>College</th><th>${matchLabel}</th><th>Chatted With</th></tr></thead><tbody>${
+    users.map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.college || '—')}</td><td><span class="stat-badge match">${u.matches}</span></td><td><span class="stat-badge chat">${u.chats}</span></td></tr>`).join('')
+  }</tbody></table>`;
+}
+
 /* ---------- boot ---------- */
-if (token) boot().catch(() => { localStorage.removeItem('gm_token'); });
+if (token) boot().then(() => checkAdmin()).catch(() => { localStorage.removeItem('gm_token'); });

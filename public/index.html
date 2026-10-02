@@ -46,7 +46,7 @@
 
   <!-- MAIN -->
   <section id="main" class="screen hidden">
-    <header><span class="logo sm">🪔 GarbaMate</span><button id="filterBtn" class="chip">Filters</button></header>
+    <header><span class="logo sm">🪔 GarbaMate</span><div class="header-right"><button id="statsBtn" class="chip hidden">📊 Stats</button><button id="filterBtn" class="chip">Filters</button></div></header>
     <main>
       <div id="tab-discover" class="tab">
         <div id="deck"></div>
@@ -94,6 +94,24 @@
       <span><button id="cUnmatch" class="chip">Unmatch</button> <button id="cReport" class="chip">Report</button></span></div>
     <div id="msgs"></div>
     <form id="msgForm"><input id="msgIn" placeholder="Say hi, plan a Garba night..." autocomplete="off"><button class="btn">Send</button></form>
+  </div>
+
+  <!-- STATS -->
+  <div id="statsModal" class="hidden">
+    <div class="stats-header">
+      <button id="statsBack" class="chip" style="color:var(--gold)">← Back</button>
+      <b style="color:var(--gold);font-family:'Playfair Display',serif;font-size:20px">📊 User Statistics</b>
+      <span></span>
+    </div>
+    <div class="stats-body">
+      <div class="stats-summary" id="statsSummary"></div>
+      <div class="stats-tabs">
+        <button class="stats-tab active" data-stab="boys">🕺 Boys</button>
+        <button class="stats-tab" data-stab="girls">💃 Girls</button>
+        <button class="stats-tab" data-stab="others">🌟 Others</button>
+      </div>
+      <div id="statsContent"></div>
+    </div>
   </div>
 
   <div id="toast"></div>
