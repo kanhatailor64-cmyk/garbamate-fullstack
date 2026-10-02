@@ -60,7 +60,8 @@ const db = {
         banned INT DEFAULT 0,
         undo_day TEXT,
         custom_question TEXT DEFAULT '',
-        expected_answer TEXT DEFAULT 'Yes'
+        expected_answer TEXT DEFAULT 'Yes',
+        terms_accepted_at TEXT DEFAULT ''
       );
     `);
     await c.execute(`CREATE TABLE IF NOT EXISTS swipes(id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INT, to_id INT, type TEXT, day TEXT, UNIQUE(from_id, to_id));`);
@@ -74,6 +75,7 @@ const db = {
     // Safe column migrations for existing databases
     try { await c.execute("ALTER TABLE users ADD COLUMN custom_question TEXT DEFAULT ''"); } catch(e){}
     try { await c.execute("ALTER TABLE users ADD COLUMN expected_answer TEXT DEFAULT 'Yes'"); } catch(e){}
+    try { await c.execute("ALTER TABLE users ADD COLUMN terms_accepted_at TEXT DEFAULT ''"); } catch(e){}
     try { await c.execute("ALTER TABLE matches ADD COLUMN status TEXT DEFAULT 'unlocked'"); } catch(e){}
     try { await c.execute("ALTER TABLE matches ADD COLUMN question TEXT DEFAULT ''"); } catch(e){}
     try { await c.execute("ALTER TABLE matches ADD COLUMN expected_answer TEXT DEFAULT ''"); } catch(e){}

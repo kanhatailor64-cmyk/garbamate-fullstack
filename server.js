@@ -127,8 +127,9 @@ app.post('/api/register', rate, async (req, res) => {
   const existing = await db.get('SELECT 1 FROM users WHERE email=?', [email]);
   if (existing) return res.status(409).json({ error: 'This email is already registered.' });
 
+  const now = new Date().toISOString();
   const r = await db.run(
-    'INSERT INTO users(email,pw,name,age,gender,college,city,state,skill,style,bio,hue) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
+    'INSERT INTO users(email,pw,name,age,gender,college,city,state,skill,style,bio,hue,terms_accepted_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)',
     [
       email,
       bcrypt.hashSync(String(b.password), 10),
@@ -141,7 +142,8 @@ app.post('/api/register', rate, async (req, res) => {
       SKILLS.includes(b.skill) ? b.skill : 'Beginner',
       STYLES.includes(b.style) ? b.style : STYLES[0],
       str(b.bio, 150),
-      Math.floor(Math.random() * 360)
+      Math.floor(Math.random() * 360),
+      now
     ]
   );
   res.json({ token: sign({ id: r.lastInsertRowid }) });
@@ -169,10 +171,18 @@ app.get('/api/me', auth, async (req, res) => {
     user: {
       ...pub(req.user),
       custom_question: req.user.custom_question || '',
-      expected_answer: req.user.expected_answer || 'Yes'
+      expected_answer: req.user.expected_answer || 'Yes',
+      terms_accepted_at: req.user.terms_accepted_at || ''
     },
     left: LIMIT - swipedToday
   });
+});
+
+app.post('/api/me/accept-terms', auth, async (req, res) => {
+  const now = new Date().toISOString();
+  await db.run('UPDATE users SET terms_accepted_at=? WHERE id=?', [now, req.user.id]);
+  req.user.terms_accepted_at = now;
+  res.json({ ok: true, terms_accepted_at: now });
 });
 
 function validatePhoto(photo) {

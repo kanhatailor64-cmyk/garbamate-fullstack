@@ -173,31 +173,36 @@
   </div>
 
   <!-- MANDATORY TERMS & LEGAL DISCLAIMER MODAL -->
-  <div id="termsModal" class="modal hidden">
-    <div class="box" style="max-height:88vh;display:flex;flex-direction:column;text-align:left;padding:20px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid #e2d2b5;padding-bottom:8px">
-        <h3 style="color:var(--maroon);margin:0;font-size:17px">📜 Terms of Service & Legal Disclaimer</h3>
-        <button id="termsModalCloseBtn" class="chip sm hidden" style="padding:2px 8px;font-size:12px">✕</button>
+  <div id="termsModal" class="hidden">
+    <div class="terms-card-wrapper">
+      <div class="terms-header-banner">
+        <div class="terms-header-title">
+          <h3>⚖️ Terms of Service & Legal Disclaimer</h3>
+          <span>Mandatory Acceptance Required</span>
+        </div>
+        <button id="termsModalCloseBtn" class="chip sm hidden" style="padding:2px 8px;font-size:12px;background:rgba(255,255,255,.2);color:#fff;border:none">✕</button>
       </div>
-      <div class="terms-scroll-body" style="flex:1;overflow-y:auto;padding-right:6px;font-size:13px;line-height:1.55;color:#4a3f35">
-        <div style="background:#fff3cd;border:1px solid #ffeeba;border-radius:10px;padding:10px;margin-bottom:12px;color:#856404;font-size:12px">
-          ⚠️ <b>MANDATORY LEGAL NOTICE:</b> Please read carefully before using GarbaMate. All user activities are on their own discretion and the platform and founders are not under any legal scrutiny or responsibility.
+
+      <div class="terms-scroll-body">
+        <div class="terms-alert-box">
+          ⚠️ <b>LEGAL NOTICE & ZERO LIABILITY DECLARATION:</b><br>
+          All user activities on GarbaMate are undertaken <b>strictly at the user's own discretion and personal risk</b>. The platform and the creators, founders, or any person associated with the development of this platform is <b>NOT in any legal scrutiny and is NOT responsible</b> for any user conduct, offline meetups, disputes, or incidents.
         </div>
         
-        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">1. User Discretion & Voluntary Participation</h4>
-        <p style="margin:0 0 8px">All activities, communications, dance partner selections, campus/event meetups, and offline gatherings arranged through GarbaMate are undertaken <b>strictly at the user's sole discretion, voluntary judgment, and personal risk</b>. GarbaMate is an introductory campus festival partner discovery tool; the platform does not conduct background checks or supervise offline interactions.</p>
+        <div class="terms-section-title">1. User Discretion & Voluntary Participation</div>
+        <p style="margin:0 0 8px">All activities, communications, dance partner matching, campus/event meetups, and offline gatherings arranged through GarbaMate are undertaken <b>strictly at your own discretion, voluntary choice, and personal risk</b>. GarbaMate is purely an introductory campus partner discovery utility; the platform does not conduct background checks, verify identities in person, or supervise offline interactions.</p>
 
-        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">2. Absolute Limitation of Liability & Zero Legal Scrutiny</h4>
-        <p style="margin:0 0 8px">You explicitly acknowledge, agree, and covenant that <b>GarbaMate, its creators, founders, student developers (including Athrva Tailor, Varshith Reddy, Anuvesha Rastogi, Viraj Salunkhe), and any person or entity associated with the development, hosting, or maintenance of this platform is NOT in any legal scrutiny, investigation, legal claims, demands, or lawsuits.</b> The platform, creators, and founders are NOT responsible or legally liable for any individual's behavior, offline occurrences, disputes, property loss, physical injury, mental distress, harassment, or unlawful acts.</p>
+        <div class="terms-section-title">2. Absolute Limitation of Liability & Zero Legal Scrutiny</div>
+        <p style="margin:0 0 8px">You explicitly acknowledge, agree, and covenant that <b>GarbaMate, its creators, founders, student developers (including Athrva Tailor, Varshith Reddy, Anuvesha Rastogi, Viraj Salunkhe), and any person or entity associated with the development, hosting, or maintenance of this platform is NOT in any legal scrutiny, investigation, legal claims, demands, or lawsuits.</b> The platform, creators, and founders are NOT responsible or legally liable under any circumstances for any user's behavior, offline occurrences, disputes, property loss, physical injury, mental distress, harassment, or unlawful acts.</p>
 
-        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">3. Age Representation (Strictly 18+)</h4>
-        <p style="margin:0 0 8px">You represent and warrant that you are at least 18 years of age. Registration or use by anyone under the age of 18 is strictly prohibited and constitutes a violation of these terms.</p>
+        <div class="terms-section-title">3. Age Representation (Strictly 18+)</div>
+        <p style="margin:0 0 8px">You represent and warrant that you are at least 18 years of age. Registration or use of GarbaMate by anyone under the age of 18 is strictly prohibited and constitutes an immediate violation of these terms.</p>
 
-        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">4. Women's Safety & Zero-Tolerance Harassment Policy</h4>
-        <p style="margin:0 0 8px">GarbaMate strictly prohibits stalking, non-consensual messaging, vulgarity, impersonation, or offensive conduct. Any reported violations will lead to immediate, irreversible banning and cooperation with campus authorities or law enforcement.</p>
+        <div class="terms-section-title">4. Women's Safety & Zero-Tolerance Harassment Policy</div>
+        <p style="margin:0 0 8px">GarbaMate maintains a zero-tolerance policy against stalking, non-consensual messaging, harassment, vulgarity, impersonation, or offensive conduct. Any violation will lead to immediate, irreversible banning and cooperation with campus authorities or law enforcement.</p>
 
-        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">5. Safety Advice & Emergency Helplines</h4>
-        <p style="margin:0 0 6px">Always celebrate in well-lit, crowded, public Garba venues. Keep trusted friends informed of your plans. In any emergency, contact official helplines:</p>
+        <div class="terms-section-title">5. Safety Advice & 24×7 Emergency Helplines</div>
+        <p style="margin:0 0 6px">Always celebrate in well-lit, crowded, public Garba venues. Keep trusted friends or family informed of your whereabouts. In any emergency, contact official helplines:</p>
         <ul style="margin:0 0 10px;padding-left:18px">
           <li><b>112</b> — National Emergency Helpline (Police / Ambulance)</li>
           <li><b>181</b> — Women's Helpline (Women Safety & Distress)</li>
@@ -206,12 +211,12 @@
         </ul>
       </div>
 
-      <div style="border-top:1px solid #e2d2b5;padding-top:10px;margin-top:8px">
-        <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ink);cursor:pointer;line-height:1.4;margin-bottom:10px">
-          <input type="checkbox" id="termsCheck" style="margin-top:2px">
-          <span><b>I am 18+ and accept</b> all Terms of Service, User Discretion policies, and Zero-Liability conditions.</span>
+      <div class="terms-footer-action">
+        <label style="display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--ink);cursor:pointer;line-height:1.45;margin-bottom:12px">
+          <input type="checkbox" id="termsCheck" style="margin-top:2px;width:16px;height:16px;accent-color:var(--maroon)">
+          <span><b>I have read, understood, and accept:</b> All my activities are at my own discretion, and the platform, creators, founders, and developers are not in any legal scrutiny and bear no responsibility.</span>
         </label>
-        <button class="btn" id="termsAcceptBtn" disabled style="width:100%;opacity:.5;cursor:not-allowed">Accept & Continue</button>
+        <button class="btn" id="termsAcceptBtn" disabled style="width:100%;opacity:.5;cursor:not-allowed">Accept Terms & Continue</button>
       </div>
     </div>
   </div>

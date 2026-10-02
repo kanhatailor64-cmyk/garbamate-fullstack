@@ -106,8 +106,17 @@ nav button.on{color:var(--red);font-weight:500;box-shadow:inset 0 3px 0 var(--ma
 .qm-status-badge.locked{background:rgba(215,38,61,.15);color:#d7263d;border:1px solid rgba(215,38,61,.4)}
 
 /* terms modal */
+#termsModal{position:fixed;inset:0;width:100vw;height:100vh;background:rgba(20,3,10,.88);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:99999;padding:16px;box-sizing:border-box}
+#termsModal.hidden{display:none}
+.terms-card-wrapper{width:100%;max-width:460px;max-height:88vh;background:#FFFDF9;border-radius:20px;border:2px solid var(--gold);box-shadow:0 25px 50px -12px rgba(0,0,0,.65);display:flex;flex-direction:column;overflow:hidden;animation:termsPop .25s ease-out}
+@keyframes termsPop{from{opacity:0;transform:scale(.94) translateY(10px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.terms-header-banner{background:linear-gradient(135deg,#5B0E2D,#800020);color:#FFFDF9;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid var(--gold)}
+.terms-alert-box{background:#FFF3CD;border:1px solid #FFEBAA;border-left:4px solid #D7263D;border-radius:8px;padding:10px 12px;margin-bottom:12px;color:#721C24;font-size:12px;line-height:1.45}
+.terms-section-title{color:#5B0E2D;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;margin:12px 0 4px}
+.terms-scroll-body{flex:1;overflow-y:auto;padding:16px;font-size:12.5px;line-height:1.55;color:#4a3f35}
 .terms-scroll-body::-webkit-scrollbar{width:5px}
 .terms-scroll-body::-webkit-scrollbar-thumb{background:#d9c9a8;border-radius:10px}
+.terms-footer-action{background:#FDF8ED;border-top:1px solid #E6D5B8;padding:12px 16px}
 
 /* Match Section Question Card for Girls */
 .girl-q-card{background:linear-gradient(135deg,rgba(201,162,75,.15),rgba(215,38,61,.08));border:1px solid rgba(201,162,75,.4);border-radius:18px;padding:14px;margin-bottom:14px}

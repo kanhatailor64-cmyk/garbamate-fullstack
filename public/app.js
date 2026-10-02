@@ -64,9 +64,9 @@ $('#authForm').onsubmit = async e => {
       return;
     }
     const termsChecked = $('#signupTermsCheck') && $('#signupTermsCheck').checked;
-    if (!termsChecked) {
+    if (!termsChecked || localStorage.getItem('gm_terms_v2') !== '1') {
       $('#err').textContent = 'You must review and accept the Terms & Legal Disclaimer to sign up.';
-      openTermsModal(true);
+      openTermsModal(false);
       return;
     }
     Object.assign(body, {
@@ -91,6 +91,9 @@ $('#authForm').onsubmit = async e => {
 };
 async function boot() {
   const d = await api('/me'); me = d.user; left = d.left;
+  if (!me.terms_accepted_at || localStorage.getItem('gm_terms_v2') !== '1') {
+    openTermsModal(false);
+  }
   $('#auth').classList.add('hidden'); $('#main').classList.remove('hidden');
   if (typeof io !== 'undefined') {
     try {
@@ -441,6 +444,7 @@ function renderProfile() {
   ${questionSectionHtml}
   <input type="file" id="photo" accept="image/*" class="hidden">
   <button class="btn" id="photoBtn">Change photo</button>
+  <button class="btn ghost" id="proTermsBtn" style="color:var(--maroon);border-color:var(--maroon);margin-top:6px">📜 Terms & Legal Disclaimer</button>
   <button class="btn ghost" id="logout" style="color:#5B0E2D;border-color:#5B0E2D">Log out</button>
   <button class="btn ghost" id="del" style="color:#D7263D;border-color:#D7263D">Delete account</button>
   <div class="pro-credits">
@@ -472,6 +476,7 @@ function renderProfile() {
     };
   }
 
+  if ($('#proTermsBtn')) $('#proTermsBtn').onclick = () => openTermsModal(true);
   $('#photoBtn').onclick = () => $('#photo').click();
   $('#photo').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
@@ -558,7 +563,7 @@ function openTermsModal(canClose = true) {
   const closeBtn = $('#termsModalCloseBtn');
   if (closeBtn) closeBtn.classList.toggle('hidden', !canClose);
 
-  const accepted = localStorage.getItem('gm_terms_accepted') === '1';
+  const accepted = localStorage.getItem('gm_terms_v2') === '1';
   const chk = $('#termsCheck');
   const btn = $('#termsAcceptBtn');
   if (chk) chk.checked = accepted;
@@ -583,17 +588,20 @@ function initTerms() {
       btn.style.opacity = chk.checked ? '1' : '0.5';
       btn.style.cursor = chk.checked ? 'pointer' : 'not-allowed';
     };
-    btn.onclick = () => {
-      localStorage.setItem('gm_terms_accepted', '1');
+    btn.onclick = async () => {
+      localStorage.setItem('gm_terms_v2', '1');
       if (signupTermsCheck) signupTermsCheck.checked = true;
       $('#termsModal').classList.add('hidden');
       toast('Terms & Legal Disclaimer accepted.');
+      if (token) {
+        try { await api('/me/accept-terms', 'POST'); } catch (e) {}
+      }
     };
   }
 
   if (closeBtn) {
     closeBtn.onclick = () => {
-      if (localStorage.getItem('gm_terms_accepted') === '1') {
+      if (localStorage.getItem('gm_terms_v2') === '1') {
         $('#termsModal').classList.add('hidden');
       } else {
         toast('You must accept the terms to proceed.');
@@ -616,7 +624,7 @@ function initTerms() {
   }
 
   // Mandatory modal popup on page load if terms have not yet been accepted
-  if (localStorage.getItem('gm_terms_accepted') !== '1') {
+  if (localStorage.getItem('gm_terms_v2') !== '1') {
     openTermsModal(false);
   }
 }
