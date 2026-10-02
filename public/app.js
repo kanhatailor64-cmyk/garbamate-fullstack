@@ -31,6 +31,7 @@ function setAuthMode(isSignup) {
   if ($('#tabLogin')) $('#tabLogin').classList.toggle('active', !signup);
   if ($('#tabSignup')) $('#tabSignup').classList.toggle('active', signup);
   $('#signupFields').classList.toggle('hidden', !signup);
+  if ($('#termsCheckboxContainer')) $('#termsCheckboxContainer').classList.toggle('hidden', !signup);
   $('#authBtn').textContent = signup ? 'Create account' : 'Log in';
   $('#toggle').textContent = signup ? 'Already have an account? Log in' : "Don't have an account? Sign up";
   $('#err').textContent = '';
@@ -50,8 +51,36 @@ if (sessionStorage.getItem('gm_logged_out')) {
 
 $('#authForm').onsubmit = async e => {
   e.preventDefault();
-  const body = { email: $('#email').value, password: $('#password').value };
-  if (signup) Object.assign(body, { name: $('#name').value, age: +$('#age').value, gender: $('#gender').value, college: $('#college').value, city: $('#city').value, state: $('#state').value, skill: $('#skill').value, style: $('#style').value, bio: $('#bio').value });
+  const body = { email: $('#email').value.trim(), password: $('#password').value };
+  if (signup) {
+    const gender = $('#gender').value;
+    if (!gender || !['Female', 'Male', 'Other'].includes(gender)) {
+      $('#err').textContent = 'Please select your gender.';
+      return;
+    }
+    const age = +$('#age').value;
+    if (!age || age < 18) {
+      $('#err').textContent = 'You must be at least 18 years old to use GarbaMate.';
+      return;
+    }
+    const termsChecked = $('#signupTermsCheck') && $('#signupTermsCheck').checked;
+    if (!termsChecked) {
+      $('#err').textContent = 'You must review and accept the Terms & Legal Disclaimer to sign up.';
+      openTermsModal(true);
+      return;
+    }
+    Object.assign(body, {
+      name: $('#name').value.trim(),
+      age,
+      gender,
+      college: $('#college').value.trim(),
+      city: $('#city').value.trim(),
+      state: $('#state').value,
+      skill: $('#skill').value,
+      style: $('#style').value,
+      bio: $('#bio').value.trim()
+    });
+  }
   try {
     token = (await api(signup ? '/register' : '/login', 'POST', body)).token;
     localStorage.setItem('gm_token', token);
@@ -184,7 +213,7 @@ function showMatch(u, matchData) {
           chatBtn.classList.remove('hidden');
           u.matchStatus = 'unlocked';
         } else {
-          st.innerHTML = '<span class="qm-status-badge locked">🔒 Answer didn\'t match — Chat Locked</span><p class="sub" style="font-size:12px;margin-top:6px">Paid chat unlock coming soon!</p>';
+          st.innerHTML = '<span class="qm-status-badge locked">🔒 Answer didn\'t match — Chat Locked</span>';
         }
       } catch (e) { toast(e.message); }
     };
@@ -298,7 +327,6 @@ function openQuestionModal(u) {
   $('#qmChoiceSection').classList.remove('hidden');
   $('#qmChoiceSection').querySelector('.qm-btn-row').classList.remove('hidden');
   $('#qmResultSection').classList.add('hidden');
-  $('#qmPaidTeaser').classList.add('hidden');
 
   $('#questionModal').classList.remove('hidden');
 }
@@ -319,7 +347,6 @@ async function submitMatchAnswer(ans) {
       badge.className = 'qm-status-badge unlocked';
       badge.innerHTML = '🔓 Match Confirmed & Chat Unlocked!';
       msg.textContent = '🎉 Your answer matched! You can now start chatting.';
-      $('#qmPaidTeaser').classList.add('hidden');
       proceed.textContent = '💬 Open Chat';
       proceed.onclick = () => {
         $('#questionModal').classList.add('hidden');
@@ -330,7 +357,6 @@ async function submitMatchAnswer(ans) {
       badge.className = 'qm-status-badge locked';
       badge.innerHTML = '🔒 Match Not Confirmed — Chat Locked';
       msg.textContent = '❌ Your answer did not match her required answer. Chat is locked.';
-      $('#qmPaidTeaser').classList.remove('hidden');
       proceed.textContent = 'Back to Matches';
       proceed.onclick = () => {
         $('#questionModal').classList.add('hidden');
@@ -524,5 +550,78 @@ $('#fApply').onclick = () => {
 };
 $('#fReset').onclick = () => { filters = { ...NOFILTER }; $('#filterModal').classList.add('hidden'); load(); };
 
+/* ---------- terms & legal disclaimer ---------- */
+function openTermsModal(canClose = true) {
+  const m = $('#termsModal');
+  if (!m) return;
+  m.classList.remove('hidden');
+  const closeBtn = $('#termsModalCloseBtn');
+  if (closeBtn) closeBtn.classList.toggle('hidden', !canClose);
+
+  const accepted = localStorage.getItem('gm_terms_accepted') === '1';
+  const chk = $('#termsCheck');
+  const btn = $('#termsAcceptBtn');
+  if (chk) chk.checked = accepted;
+  if (btn) {
+    btn.disabled = !accepted;
+    btn.style.opacity = accepted ? '1' : '0.5';
+    btn.style.cursor = accepted ? 'pointer' : 'not-allowed';
+  }
+}
+
+function initTerms() {
+  const chk = $('#termsCheck');
+  const btn = $('#termsAcceptBtn');
+  const closeBtn = $('#termsModalCloseBtn');
+  const authTermsBtn = $('#authTermsBtn');
+  const viewTermsLink = $('#viewTermsLink');
+  const signupTermsCheck = $('#signupTermsCheck');
+
+  if (chk && btn) {
+    chk.onchange = () => {
+      btn.disabled = !chk.checked;
+      btn.style.opacity = chk.checked ? '1' : '0.5';
+      btn.style.cursor = chk.checked ? 'pointer' : 'not-allowed';
+    };
+    btn.onclick = () => {
+      localStorage.setItem('gm_terms_accepted', '1');
+      if (signupTermsCheck) signupTermsCheck.checked = true;
+      $('#termsModal').classList.add('hidden');
+      toast('Terms & Legal Disclaimer accepted.');
+    };
+  }
+
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      if (localStorage.getItem('gm_terms_accepted') === '1') {
+        $('#termsModal').classList.add('hidden');
+      } else {
+        toast('You must accept the terms to proceed.');
+      }
+    };
+  }
+
+  if (authTermsBtn) {
+    authTermsBtn.onclick = (e) => {
+      e.preventDefault();
+      openTermsModal(true);
+    };
+  }
+
+  if (viewTermsLink) {
+    viewTermsLink.onclick = (e) => {
+      e.preventDefault();
+      openTermsModal(true);
+    };
+  }
+
+  // Mandatory modal popup on page load if terms have not yet been accepted
+  if (localStorage.getItem('gm_terms_accepted') !== '1') {
+    openTermsModal(false);
+  }
+}
+
 /* ---------- boot ---------- */
+initTerms();
 if (token) boot().catch(() => { localStorage.removeItem('gm_token'); });
+

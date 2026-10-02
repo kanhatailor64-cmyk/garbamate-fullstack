@@ -21,8 +21,13 @@
     <form id="authForm">
       <div id="signupFields" class="hidden">
         <input id="name" placeholder="Full name">
-        <input id="age" type="number" min="18" placeholder="Age (18+ only)">
-        <select id="gender"><option>Female</option><option>Male</option><option>Other</option></select>
+        <input id="age" type="number" min="18" max="80" placeholder="Age (18+ only)">
+        <select id="gender" required>
+          <option value="" disabled selected>Select Gender *</option>
+          <option value="Female">Female</option>
+          <option value="Male">Male</option>
+          <option value="Other">Other</option>
+        </select>
         <input id="college" placeholder="College name">
         <input id="city" placeholder="City">
         <select id="state"></select>
@@ -32,11 +37,18 @@
       </div>
       <input id="email" type="email" placeholder="Email" required>
       <input id="password" type="password" placeholder="Password (min 6)" required>
+      <div id="termsCheckboxContainer" class="hidden" style="margin:2px 0 6px;text-align:left">
+        <label style="font-size:12px;color:rgba(255,248,236,.85);display:flex;align-items:flex-start;gap:8px;cursor:pointer;line-height:1.4">
+          <input type="checkbox" id="signupTermsCheck" style="margin-top:2px">
+          <span>I am 18+ and agree to the <a href="#" id="viewTermsLink" style="color:var(--gold);text-decoration:underline">Terms & Legal Disclaimer</a> (Activities at user's sole discretion).</span>
+        </label>
+      </div>
       <p id="err" class="err"></p>
       <button class="btn" id="authBtn">Log in</button>
       <p class="switch" id="toggle">New here? Create account</p>
     </form>
     <footer class="credits">
+      <p style="margin-bottom:8px"><a href="#" id="authTermsBtn" style="color:var(--gold);font-size:12px;text-decoration:underline;cursor:pointer">📜 Terms of Service & Legal Disclaimer</a></p>
       <p class="credits-label">Crafted with ❤️ for Navratri by</p>
       <p class="credits-team">
         <span>Athrva tailor</span> • <span>Varshith reddy</span> • <span>Anuvesha rastogi</span> • <span>Viraj salunkhe (oreo)</span>
@@ -120,14 +132,6 @@
       <div id="qmResultSection" class="hidden">
         <div id="qmResultBadge" class="qm-status-badge"></div>
         <p id="qmResultMsg" style="font-size:14px;margin:12px 0;line-height:1.4"></p>
-        <div id="qmPaidTeaser" class="hidden">
-          <div class="paid-teaser-card">
-            <span class="paid-pill">⚡ Coming Soon</span>
-            <div style="font-weight:600;font-size:14px;color:var(--maroon);margin:4px 0">💳 Paid Chat Unlock</div>
-            <p style="font-size:12px;color:#6b5a50;margin:0 0 8px">Want to chat anyway? Paid instant chat unlock will be available in an upcoming update!</p>
-            <button class="btn ghost sm" disabled style="opacity:.6;cursor:not-allowed">Pay to Unlock (Coming Soon)</button>
-          </div>
-        </div>
         <button class="btn" id="qmProceedBtn" style="margin-top:12px">Open Chat</button>
       </div>
 
@@ -163,16 +167,52 @@
     <div class="box center">
       <div style="font-size:48px;margin-bottom:8px">🔒</div>
       <h3 style="color:var(--maroon);margin-bottom:6px">Chat Locked</h3>
-      <p id="lcmDesc" class="sub" style="font-size:13px;line-height:1.4;margin-bottom:16px">The required match question was answered incorrectly. Chat between both users is locked.</p>
-      
-      <div class="paid-teaser-card" style="margin-bottom:14px">
-        <span class="paid-pill">⚡ Future Feature</span>
-        <div style="font-weight:600;font-size:14px;color:var(--maroon);margin:4px 0">💳 Paid Chat Unlock</div>
-        <p style="font-size:12px;color:#6b5a50;margin:0 0 8px">Direct paid unlock functionality will be enabled soon. You will be able to unlock this conversation instantly!</p>
-        <button class="btn ghost sm" disabled style="opacity:.6;cursor:not-allowed">Pay to Unlock (Coming Soon)</button>
+      <p id="lcmDesc" class="sub" style="font-size:13px;line-height:1.4;margin-bottom:16px">The required match question was answered incorrectly. Chat between both users is permanently locked to respect user boundaries.</p>
+      <button class="btn ghost" id="lcmCloseBtn">Close</button>
+    </div>
+  </div>
+
+  <!-- MANDATORY TERMS & LEGAL DISCLAIMER MODAL -->
+  <div id="termsModal" class="modal hidden">
+    <div class="box" style="max-height:88vh;display:flex;flex-direction:column;text-align:left;padding:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;border-bottom:1px solid #e2d2b5;padding-bottom:8px">
+        <h3 style="color:var(--maroon);margin:0;font-size:17px">📜 Terms of Service & Legal Disclaimer</h3>
+        <button id="termsModalCloseBtn" class="chip sm hidden" style="padding:2px 8px;font-size:12px">✕</button>
+      </div>
+      <div class="terms-scroll-body" style="flex:1;overflow-y:auto;padding-right:6px;font-size:13px;line-height:1.55;color:#4a3f35">
+        <div style="background:#fff3cd;border:1px solid #ffeeba;border-radius:10px;padding:10px;margin-bottom:12px;color:#856404;font-size:12px">
+          ⚠️ <b>MANDATORY LEGAL NOTICE:</b> Please read carefully before using GarbaMate. All user activities are on their own discretion and the platform and founders are not under any legal scrutiny or responsibility.
+        </div>
+        
+        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">1. User Discretion & Voluntary Participation</h4>
+        <p style="margin:0 0 8px">All activities, communications, dance partner selections, campus/event meetups, and offline gatherings arranged through GarbaMate are undertaken <b>strictly at the user's sole discretion, voluntary judgment, and personal risk</b>. GarbaMate is an introductory campus festival partner discovery tool; the platform does not conduct background checks or supervise offline interactions.</p>
+
+        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">2. Absolute Limitation of Liability & Zero Legal Scrutiny</h4>
+        <p style="margin:0 0 8px">You explicitly acknowledge, agree, and covenant that <b>GarbaMate, its creators, founders, student developers (including Athrva Tailor, Varshith Reddy, Anuvesha Rastogi, Viraj Salunkhe), and any person or entity associated with the development, hosting, or maintenance of this platform is NOT in any legal scrutiny, investigation, legal claims, demands, or lawsuits.</b> The platform, creators, and founders are NOT responsible or legally liable for any individual's behavior, offline occurrences, disputes, property loss, physical injury, mental distress, harassment, or unlawful acts.</p>
+
+        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">3. Age Representation (Strictly 18+)</h4>
+        <p style="margin:0 0 8px">You represent and warrant that you are at least 18 years of age. Registration or use by anyone under the age of 18 is strictly prohibited and constitutes a violation of these terms.</p>
+
+        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">4. Women's Safety & Zero-Tolerance Harassment Policy</h4>
+        <p style="margin:0 0 8px">GarbaMate strictly prohibits stalking, non-consensual messaging, vulgarity, impersonation, or offensive conduct. Any reported violations will lead to immediate, irreversible banning and cooperation with campus authorities or law enforcement.</p>
+
+        <h4 style="color:var(--maroon);margin:10px 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.5px">5. Safety Advice & Emergency Helplines</h4>
+        <p style="margin:0 0 6px">Always celebrate in well-lit, crowded, public Garba venues. Keep trusted friends informed of your plans. In any emergency, contact official helplines:</p>
+        <ul style="margin:0 0 10px;padding-left:18px">
+          <li><b>112</b> — National Emergency Helpline (Police / Ambulance)</li>
+          <li><b>181</b> — Women's Helpline (Women Safety & Distress)</li>
+          <li><b>14490</b> — National Commission for Women (24×7 NCW Helpline)</li>
+          <li><b>1930</b> — National Cyber Crime Reporting Portal</li>
+        </ul>
       </div>
 
-      <button class="btn ghost" id="lcmCloseBtn">Close</button>
+      <div style="border-top:1px solid #e2d2b5;padding-top:10px;margin-top:8px">
+        <label style="display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--ink);cursor:pointer;line-height:1.4;margin-bottom:10px">
+          <input type="checkbox" id="termsCheck" style="margin-top:2px">
+          <span><b>I am 18+ and accept</b> all Terms of Service, User Discretion policies, and Zero-Liability conditions.</span>
+        </label>
+        <button class="btn" id="termsAcceptBtn" disabled style="width:100%;opacity:.5;cursor:not-allowed">Accept & Continue</button>
+      </div>
     </div>
   </div>
 

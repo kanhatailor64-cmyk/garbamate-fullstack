@@ -6,7 +6,11 @@ const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const db = require('./db');
 
-const SECRET = process.env.JWT_SECRET || 'change-this-secret-in-production';
+const SECRET = process.env.JWT_SECRET || 'gm_jwt_prod_key_77b4205d8f31e9c20a';
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET && !process.env.VERCEL) {
+  console.error('FATAL: JWT_SECRET environment variable is missing. Server refusing to start.');
+  process.exit(1);
+}
 const PORT = process.env.PORT || 3000;
 const LIMIT = 50;
 const STATES = ['Gujarat', 'Rajasthan', 'Maharashtra', 'Madhya Pradesh', 'Delhi', 'Haryana', 'Punjab', 'Uttar Pradesh', 'Karnataka', 'Other'];
@@ -39,7 +43,7 @@ const used = async id => {
 };
 const matched = async (x, y) => {
   const [a, b] = [x, y].sort((p, q) => p - q);
-  const row = await db.get('SELECT 1 FROM matches WHERE a=? AND b=? AND (status="unlocked" OR unlocked_by_paid=1)', [a, b]);
+  const row = await db.get('SELECT 1 FROM matches WHERE a=? AND b=? AND status="unlocked"', [a, b]);
   return !!row;
 };
 const clean = t => t.replace(/\b(fuck|shit|bitch|asshole|bastard)\b/gi, '***');
@@ -118,6 +122,7 @@ app.post('/api/register', rate, async (req, res) => {
   if (String(b.password || '').length < 6) return res.status(400).json({ error: 'Password needs at least 6 characters.' });
   const name = str(b.name, 40), college = str(b.college, 80), city = str(b.city, 60);
   if (!name || !college || !city || !STATES.includes(b.state)) return res.status(400).json({ error: 'Fill name, college, city and state.' });
+  if (!['Female', 'Male', 'Other'].includes(b.gender)) return res.status(400).json({ error: 'Please select your gender (Female, Male, or Other).' });
   
   const existing = await db.get('SELECT 1 FROM users WHERE email=?', [email]);
   if (existing) return res.status(409).json({ error: 'This email is already registered.' });
@@ -129,7 +134,7 @@ app.post('/api/register', rate, async (req, res) => {
       bcrypt.hashSync(String(b.password), 10),
       name,
       age,
-      ['Female', 'Male', 'Other'].includes(b.gender) ? b.gender : 'Other',
+      b.gender,
       college,
       city,
       b.state,
@@ -170,9 +175,18 @@ app.get('/api/me', auth, async (req, res) => {
   });
 });
 
+function validatePhoto(photo) {
+  if (typeof photo !== 'string') return null;
+  if (photo.length > 700000) return null;
+  const match = photo.match(/^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/=]+)$/);
+  if (!match) return null;
+  if (/script|svg|html|xml|onerror|onload/i.test(photo)) return null;
+  return photo;
+}
+
 app.put('/api/me', auth, async (req, res) => {
   const b = req.body, u = req.user;
-  const photo = typeof b.photo === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(b.photo) && b.photo.length < 600000 ? b.photo : u.photo;
+  const photo = b.photo !== undefined ? (validatePhoto(b.photo) || (b.photo === '' ? '' : u.photo)) : u.photo;
   const customQuestion = b.custom_question !== undefined ? str(b.custom_question, 200).trim() : (u.custom_question || '');
   const expectedAnswer = b.expected_answer !== undefined ? (String(b.expected_answer).trim().toLowerCase() === 'no' ? 'No' : 'Yes') : (u.expected_answer || 'Yes');
 
@@ -240,7 +254,10 @@ app.get('/api/discover', auth, async (req, res) => {
 
   const whereClause = w.length ? 'AND ' + w.join(' AND ') : '';
   const sql = `SELECT * FROM users WHERE id!=? AND banned=0 AND id NOT IN (SELECT to_id FROM swipes WHERE from_id=?) ${whereClause}
-    ORDER BY (SELECT COUNT(*) FROM swipes s WHERE s.from_id=users.id AND s.to_id=? AND s.type='super') DESC, (LOWER(college)=LOWER(?)) DESC, RANDOM() LIMIT 20`;
+    ORDER BY (photo IS NOT NULL AND photo != '' AND photo != 'null') DESC,
+             (SELECT COUNT(*) FROM swipes s WHERE s.from_id=users.id AND s.to_id=? AND s.type='super') DESC,
+             (LOWER(college)=LOWER(?)) DESC,
+             RANDOM() LIMIT 20`;
   const rows = await db.all(sql, [me.id, me.id, ...p, me.id, me.college]);
   res.json({ users: rows.map(pub) });
 });
@@ -317,8 +334,13 @@ app.post('/api/undo', auth, async (req, res) => {
   const s = await db.get('SELECT * FROM swipes WHERE from_id=? ORDER BY id DESC LIMIT 1', [me.id]);
   if (!s) return res.status(400).json({ error: 'Nothing to undo.' });
 
-  await db.run('DELETE FROM swipes WHERE id=?', [s.id]);
   const [a, b] = [me.id, s.to_id].sort((x, y) => x - y);
+  const matchRow = await db.get('SELECT * FROM matches WHERE a=? AND b=?', [a, b]);
+  if (matchRow && matchRow.status === 'locked') {
+    return res.status(400).json({ error: 'Cannot undo a locked match.' });
+  }
+
+  await db.run('DELETE FROM swipes WHERE id=?', [s.id]);
   await db.run('DELETE FROM matches WHERE a=? AND b=?', [a, b]);
   await db.run('UPDATE users SET undo_day=? WHERE id=?', [today(), me.id]);
 
@@ -402,14 +424,6 @@ app.post('/api/matches/:id/answer', auth, async (req, res) => {
   });
 });
 
-app.post('/api/matches/:id/unlock-paid', auth, async (req, res) => {
-  res.json({
-    ok: false,
-    futureFeature: true,
-    message: 'Paid chat unlock will be available in an upcoming update.'
-  });
-});
-
 app.delete('/api/matches/:id', auth, async (req, res) => {
   const [a, b] = [req.user.id, +req.params.id].sort((x, y) => x - y);
   await db.run('DELETE FROM matches WHERE a=? AND b=?', [a, b]);
@@ -420,7 +434,7 @@ app.get('/api/messages/:id', auth, async (req, res) => {
   const me = req.user.id, o = +req.params.id;
   const m = await getMatchRecord(me, o);
   if (!m) return res.status(403).json({ error: 'You can only chat with matches.' });
-  if (m.status !== 'unlocked' && !m.unlocked_by_paid) {
+  if (m.status !== 'unlocked') {
     return res.status(403).json({
       error: m.status === 'locked'
         ? 'Chat is locked because the question answer did not match.'
@@ -440,7 +454,7 @@ app.post('/api/messages', auth, async (req, res) => {
   const t = await db.get('SELECT * FROM users WHERE id=?', [to]);
   const matchRec = await getMatchRecord(me.id, to);
   if (!t || !matchRec) return res.status(403).json({ error: 'You can only chat with matches.' });
-  if (matchRec.status !== 'unlocked' && !matchRec.unlocked_by_paid) {
+  if (matchRec.status !== 'unlocked') {
     return res.status(403).json({
       error: matchRec.status === 'locked'
         ? 'Chat is locked because the question answer did not match.'
@@ -464,11 +478,7 @@ app.post('/api/report', auth, async (req, res) => {
   res.json({ ok: true });
 });
 
-const allowedAdmins = new Set([
-  'knhatailor64@gmail.com',
-  'oreo@gmail.com',
-  'kanhatailor64@gmail.com'
-]);
+const allowedAdmins = new Set();
 if (process.env.ADMIN_EMAIL) {
   process.env.ADMIN_EMAIL.toLowerCase().split(',').forEach(e => {
     if (e.trim()) allowedAdmins.add(e.trim());
