@@ -71,7 +71,10 @@ async function boot() {
           if (!thread.some(x => x.id === m.id)) { thread.push(m); drawMsgs(); }
         } else toast('New message 💬');
       });
-      sock.on('match', u => showMatch(u));
+      sock.on('match', d => showMatch(d, d.matchData));
+      sock.on('match_status_change', () => {
+        if (!$('#tab-matches').classList.contains('hidden')) renderMatches();
+      });
     } catch (e) {
       console.warn('Socket connection inactive, using polling fallback');
     }
@@ -134,7 +137,7 @@ async function swipe(type) {
   queue.shift();
   try {
     const r = await api('/swipe', 'POST', { targetId: u.id, type }); left = r.left;
-    if (r.match) setTimeout(() => showMatch(r.user), 250);
+    if (r.match) setTimeout(() => showMatch(r.user, r.matchData), 250);
   } catch (x) { queue.unshift(u); toast(x.message); }
   setTimeout(async () => { if (queue.length < 3) await load(); else renderDeck(); busy = false; }, 250);
 }
@@ -150,7 +153,7 @@ document.onkeydown = e => {
 };
 
 /* ---------- match ---------- */
-function showMatch(u) {
+function showMatch(u, matchData) {
   const m = $('#matchModal');
   m.querySelector('.pair').innerHTML = avatar(me) + avatar(u);
   m.classList.remove('hidden');
@@ -159,7 +162,41 @@ function showMatch(u) {
     s.style.left = Math.random() * 100 + '%'; s.style.animationDelay = Math.random() * .8 + 's';
     m.appendChild(s); setTimeout(() => s.remove(), 3500);
   }
-  $('#mChat').onclick = () => { m.classList.add('hidden'); openChat(u); };
+
+  const qSec = $('#mQuestionSection');
+  const chatBtn = $('#mChat');
+
+  if (matchData && matchData.requiresMyAnswer) {
+    qSec.classList.remove('hidden');
+    $('#mQuestionBox').textContent = `"${matchData.question}"`;
+    $('#mQuestionStatus').className = 'hidden';
+    qSec.querySelector('.qm-btn-row').classList.remove('hidden');
+    chatBtn.classList.add('hidden');
+
+    const handleAnswer = async (ans) => {
+      try {
+        const res = await api('/matches/' + matchData.matchId + '/answer', 'POST', { answer: ans });
+        qSec.querySelector('.qm-btn-row').classList.add('hidden');
+        const st = $('#mQuestionStatus');
+        st.classList.remove('hidden');
+        if (res.ok) {
+          st.innerHTML = '<span class="qm-status-badge unlocked">🔓 Match Confirmed & Chat Unlocked!</span>';
+          chatBtn.classList.remove('hidden');
+          u.matchStatus = 'unlocked';
+        } else {
+          st.innerHTML = '<span class="qm-status-badge locked">🔒 Answer didn\'t match — Chat Locked</span><p class="sub" style="font-size:12px;margin-top:6px">Paid chat unlock coming soon!</p>';
+        }
+      } catch (e) { toast(e.message); }
+    };
+
+    $('#mBtnYes').onclick = () => handleAnswer('Yes');
+    $('#mBtnNo').onclick = () => handleAnswer('No');
+  } else {
+    qSec.classList.add('hidden');
+    chatBtn.classList.remove('hidden');
+  }
+
+  chatBtn.onclick = () => { m.classList.add('hidden'); openChat(u); };
   $('#mKeep').onclick = () => m.classList.add('hidden');
 }
 
@@ -174,14 +211,208 @@ document.querySelectorAll('nav button').forEach(b => b.onclick = () => tab(b.dat
 
 async function renderMatches() {
   const { users } = await api('/matches');
-  $('#tab-matches').innerHTML = '<h3 style="margin:6px 0">Your matches</h3>' + (users.length ? users.map((u, i) =>
-    `<div class="item" data-i="${i}">${avatar(u)}<div><b>${esc(u.name)}</b><div class="sub">${esc(u.college)} · ${esc(u.city)}</div></div></div>`).join('')
-    : '<p class="sub" style="margin-top:20px">No matches yet. Swipe right on people you want to dance with.</p>');
-  document.querySelectorAll('#tab-matches .item').forEach(el => el.onclick = () => openChat(users[el.dataset.i]));
+  let html = '';
+
+  if (me.gender === 'Female') {
+    html += `
+      <div class="girl-q-card">
+        <div class="gq-top">
+          <span class="gq-title">🎯 Your Match Question</span>
+          <button class="chip" id="btnEditGQ">⚙️ ${me.custom_question ? 'Edit Question' : 'Set Question'}</button>
+        </div>
+        ${me.custom_question
+          ? `<p class="gq-question">"${esc(me.custom_question)}"</p>
+             <div class="gq-meta">Required Answer: <span class="gq-ans-badge ${me.expected_answer?.toLowerCase() === 'no' ? 'no' : 'yes'}">${esc(me.expected_answer || 'Yes')}</span></div>`
+          : `<p class="gq-placeholder">Set a custom question that boys must answer (Yes/No) before matching with you!</p>`
+        }
+      </div>
+    `;
+  }
+
+  html += '<h3 style="margin:6px 0">Your matches</h3>';
+  
+  if (users.length) {
+    html += users.map((u, i) => {
+      let badgeHtml = '';
+      if (u.matchStatus === 'unlocked') {
+        badgeHtml = '<span class="match-badge unlocked">💬 Unlocked</span>';
+      } else if (u.matchStatus === 'pending_question') {
+        if (u.requiresMyAnswer) {
+          badgeHtml = '<span class="match-badge pending-action">❓ Answer Question</span>';
+        } else {
+          badgeHtml = '<span class="match-badge waiting">⏳ Awaiting Answer</span>';
+        }
+      } else if (u.matchStatus === 'locked') {
+        badgeHtml = '<span class="match-badge locked">🔒 Chat Locked</span>';
+      }
+
+      return `
+        <div class="item" data-i="${i}">
+          ${avatar(u)}
+          <div style="flex:1;min-width:0">
+            <b>${esc(u.name)}</b>
+            <div class="sub">${esc(u.college)} · ${esc(u.city)}</div>
+          </div>
+          <div class="item-status-col">${badgeHtml}</div>
+        </div>
+      `;
+    }).join('');
+  } else {
+    html += '<p class="sub" style="margin-top:20px">No matches yet. Swipe right on people you want to dance with.</p>';
+  }
+
+  $('#tab-matches').innerHTML = html;
+
+  if ($('#btnEditGQ')) {
+    $('#btnEditGQ').onclick = openEditQuestionModal;
+  }
+
+  document.querySelectorAll('#tab-matches .item').forEach(el => {
+    const u = users[el.dataset.i];
+    el.onclick = () => {
+      if (u.matchStatus === 'unlocked') {
+        openChat(u);
+      } else if (u.matchStatus === 'pending_question') {
+        if (u.requiresMyAnswer) {
+          openQuestionModal(u);
+        } else {
+          toast(`Waiting for ${u.name} to answer your question.`);
+        }
+      } else if (u.matchStatus === 'locked') {
+        openLockedModal(u);
+      }
+    };
+  });
 }
+
+/* Question Modals Logic */
+let currentAnsweringMatch = null;
+
+function openQuestionModal(u) {
+  currentAnsweringMatch = u;
+  $('#qmAvatar').innerHTML = avatar(u);
+  $('#qmTitle').textContent = `${u.name}'s Match Question`;
+  $('#qmSubtitle').textContent = `Answer her custom question to confirm the match and unlock chat:`;
+  $('#qmQuestionBox').textContent = `"${u.matchQuestion || 'Do you want to match?'}"`;
+
+  $('#qmChoiceSection').classList.remove('hidden');
+  $('#qmChoiceSection').querySelector('.qm-btn-row').classList.remove('hidden');
+  $('#qmResultSection').classList.add('hidden');
+  $('#qmPaidTeaser').classList.add('hidden');
+
+  $('#questionModal').classList.remove('hidden');
+}
+
+async function submitMatchAnswer(ans) {
+  if (!currentAnsweringMatch) return;
+  const u = currentAnsweringMatch;
+  try {
+    const res = await api(`/matches/${u.matchId}/answer`, 'POST', { answer: ans });
+    $('#qmChoiceSection').classList.add('hidden');
+    $('#qmResultSection').classList.remove('hidden');
+
+    const badge = $('#qmResultBadge');
+    const msg = $('#qmResultMsg');
+    const proceed = $('#qmProceedBtn');
+
+    if (res.ok) {
+      badge.className = 'qm-status-badge unlocked';
+      badge.innerHTML = '🔓 Match Confirmed & Chat Unlocked!';
+      msg.textContent = '🎉 Your answer matched! You can now start chatting.';
+      $('#qmPaidTeaser').classList.add('hidden');
+      proceed.textContent = '💬 Open Chat';
+      proceed.onclick = () => {
+        $('#questionModal').classList.add('hidden');
+        u.matchStatus = 'unlocked';
+        openChat(u);
+      };
+    } else {
+      badge.className = 'qm-status-badge locked';
+      badge.innerHTML = '🔒 Match Not Confirmed — Chat Locked';
+      msg.textContent = '❌ Your answer did not match her required answer. Chat is locked.';
+      $('#qmPaidTeaser').classList.remove('hidden');
+      proceed.textContent = 'Back to Matches';
+      proceed.onclick = () => {
+        $('#questionModal').classList.add('hidden');
+        renderMatches();
+      };
+    }
+  } catch (x) {
+    toast(x.message);
+  }
+}
+
+$('#qmBtnYes').onclick = () => submitMatchAnswer('Yes');
+$('#qmBtnNo').onclick = () => submitMatchAnswer('No');
+$('#qmCloseBtn').onclick = () => {
+  $('#questionModal').classList.add('hidden');
+  renderMatches();
+};
+
+function openLockedModal(u) {
+  $('#lcmDesc').textContent = `The match question was not answered correctly. Chat between you and ${u.name} remains locked.`;
+  $('#lockedChatModal').classList.remove('hidden');
+}
+$('#lcmCloseBtn').onclick = () => $('#lockedChatModal').classList.add('hidden');
+
+function openEditQuestionModal() {
+  $('#eqText').value = me.custom_question || '';
+  const isNo = (me.expected_answer || 'Yes').toLowerCase() === 'no';
+  document.querySelectorAll('input[name="eqAnswerRadio"]').forEach(r => {
+    r.checked = (r.value === (isNo ? 'No' : 'Yes'));
+  });
+  $('#editQuestionModal').classList.remove('hidden');
+}
+
+$('#eqSaveBtn').onclick = async () => {
+  const q = $('#eqText').value.trim();
+  const selectedRadio = document.querySelector('input[name="eqAnswerRadio"]:checked');
+  const a = selectedRadio ? selectedRadio.value : 'Yes';
+  try {
+    const res = await api('/me/question', 'PUT', { question: q, expected_answer: a });
+    me = res.user;
+    $('#editQuestionModal').classList.add('hidden');
+    toast('Match question saved! 🎯');
+    renderMatches();
+  } catch (e) { toast(e.message); }
+};
+
+$('#eqRemoveBtn').onclick = async () => {
+  try {
+    const res = await api('/me/question', 'PUT', { question: '', expected_answer: 'Yes' });
+    me = res.user;
+    $('#editQuestionModal').classList.add('hidden');
+    toast('Match question removed. Open matching enabled.');
+    renderMatches();
+  } catch (e) { toast(e.message); }
+};
+
+$('#eqCancelBtn').onclick = () => $('#editQuestionModal').classList.add('hidden');
+
 function renderProfile() {
+  let questionSectionHtml = '';
+  if (me.gender === 'Female') {
+    questionSectionHtml = `
+      <div class="girl-q-card" style="margin:16px 0;text-align:left">
+        <div class="gq-top">
+          <span class="gq-title">🎯 Custom Match Question</span>
+        </div>
+        <p class="sub" style="font-size:12px;margin:0 0 8px">Boys must answer this question before matching with you:</p>
+        <input id="pqQuestion" placeholder="e.g., Do you know traditional 3-taali Garba?" value="${esc(me.custom_question || '')}" maxlength="200" style="margin-bottom:8px">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:10px">
+          <span style="font-size:13px;font-weight:600;color:var(--ink)">Required Answer:</span>
+          <label style="font-size:14px;cursor:pointer"><input type="radio" name="pqRadio" value="Yes" ${me.expected_answer !== 'No' ? 'checked' : ''}> <b>Yes</b></label>
+          <label style="font-size:14px;cursor:pointer"><input type="radio" name="pqRadio" value="No" ${me.expected_answer === 'No' ? 'checked' : ''}> <b>No</b></label>
+        </div>
+        <button class="btn sm" id="btnSavePq">Save Question</button>
+        ${me.custom_question ? '<button class="btn ghost sm" id="btnClearPq" style="margin-top:6px">Remove Question</button>' : ''}
+      </div>
+    `;
+  }
+
   $('#tab-profile').innerHTML = `<div class="pro">${avatar(me)}<h3>${esc(me.name)}, ${me.age}</h3>
   <p>🎓 ${esc(me.college)}</p><p>📍 ${esc(me.city)}, ${esc(me.state)}</p><p>🪩 ${esc(me.skill)} · ${esc(me.style)}</p><p class="sub">${esc(me.bio)}</p>
+  ${questionSectionHtml}
   <input type="file" id="photo" accept="image/*" class="hidden">
   <button class="btn" id="photoBtn">Change photo</button>
   <button class="btn ghost" id="logout" style="color:#5B0E2D;border-color:#5B0E2D">Log out</button>
@@ -191,6 +422,30 @@ function renderProfile() {
     <div class="pro-credits-names">Athrva tailor • Varshith reddy • Anuvesha rastogi • Viraj salunkhe (oreo)</div>
   </div>
   </div>`;
+  
+  if ($('#btnSavePq')) {
+    $('#btnSavePq').onclick = async () => {
+      const q = $('#pqQuestion').value.trim();
+      const a = document.querySelector('input[name="pqRadio"]:checked')?.value || 'Yes';
+      try {
+        const res = await api('/me/question', 'PUT', { question: q, expected_answer: a });
+        me = res.user;
+        toast('Match question saved! 🎯');
+        renderProfile();
+      } catch (x) { toast(x.message); }
+    };
+  }
+  if ($('#btnClearPq')) {
+    $('#btnClearPq').onclick = async () => {
+      try {
+        const res = await api('/me/question', 'PUT', { question: '', expected_answer: 'Yes' });
+        me = res.user;
+        toast('Question removed');
+        renderProfile();
+      } catch (x) { toast(x.message); }
+    };
+  }
+
   $('#photoBtn').onclick = () => $('#photo').click();
   $('#photo').onchange = e => {
     const f = e.target.files[0]; if (!f) return;
@@ -206,6 +461,11 @@ function renderProfile() {
 
 /* ---------- chat ---------- */
 async function openChat(u) {
+  if (u.matchStatus && u.matchStatus !== 'unlocked') {
+    if (u.matchStatus === 'locked') return openLockedModal(u);
+    if (u.requiresMyAnswer) return openQuestionModal(u);
+    return toast(`Waiting for ${u.name} to answer your match question.`);
+  }
   chat = u; $('#cName').textContent = u.name; $('#chatModal').classList.remove('hidden');
   thread = []; drawMsgs();
   try { thread = (await api('/messages/' + u.id)).messages || []; } catch (x) { toast(x.message); }

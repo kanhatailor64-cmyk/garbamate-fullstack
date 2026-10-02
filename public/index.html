@@ -84,9 +84,97 @@
   <div id="matchModal" class="modal hidden"><div class="box center">
     <h1>It's a Garba Match!</h1>
     <div class="pair"><div id="mA"></div><div id="mB"></div></div>
+    
+    <!-- When girl has a question for boy -->
+    <div id="mQuestionSection" class="hidden" style="margin:14px 0">
+      <p id="mQuestionSub" class="sub" style="font-size:13px;margin-bottom:8px">Answer her question to confirm match & unlock chat:</p>
+      <div id="mQuestionBox" class="qm-qbox"></div>
+      <div class="qm-btn-row" style="margin-top:12px">
+        <button type="button" class="btn qm-btn yes" id="mBtnYes">👍 Yes</button>
+        <button type="button" class="btn qm-btn no" id="mBtnNo">👎 No</button>
+      </div>
+      <div id="mQuestionStatus" class="hidden" style="margin-top:10px"></div>
+    </div>
+
     <button class="btn" id="mChat">Send message</button>
     <button class="btn ghost" id="mKeep">Keep swiping</button>
   </div></div>
+
+  <!-- QUESTION MODAL (BOY ANSWERS GIRL'S QUESTION) -->
+  <div id="questionModal" class="modal hidden">
+    <div class="box center">
+      <div id="qmAvatar" style="font-size:52px;margin-bottom:6px">💃</div>
+      <h3 id="qmTitle" style="color:var(--maroon);margin-bottom:4px">Garba Compatibility Question</h3>
+      <p id="qmSubtitle" class="sub" style="font-size:13px;margin-bottom:12px">Answer her custom question to confirm the match and unlock chat:</p>
+      
+      <div id="qmQuestionBox" class="qm-qbox"></div>
+      
+      <div id="qmChoiceSection">
+        <p style="font-size:12px;font-weight:600;color:var(--maroon);margin:14px 0 10px;text-transform:uppercase;letter-spacing:.6px">Select Your Answer</p>
+        <div class="qm-btn-row">
+          <button type="button" class="btn qm-btn yes" id="qmBtnYes">👍 Yes</button>
+          <button type="button" class="btn qm-btn no" id="qmBtnNo">👎 No</button>
+        </div>
+      </div>
+
+      <div id="qmResultSection" class="hidden">
+        <div id="qmResultBadge" class="qm-status-badge"></div>
+        <p id="qmResultMsg" style="font-size:14px;margin:12px 0;line-height:1.4"></p>
+        <div id="qmPaidTeaser" class="hidden">
+          <div class="paid-teaser-card">
+            <span class="paid-pill">⚡ Coming Soon</span>
+            <div style="font-weight:600;font-size:14px;color:var(--maroon);margin:4px 0">💳 Paid Chat Unlock</div>
+            <p style="font-size:12px;color:#6b5a50;margin:0 0 8px">Want to chat anyway? Paid instant chat unlock will be available in an upcoming update!</p>
+            <button class="btn ghost sm" disabled style="opacity:.6;cursor:not-allowed">Pay to Unlock (Coming Soon)</button>
+          </div>
+        </div>
+        <button class="btn" id="qmProceedBtn" style="margin-top:12px">Open Chat</button>
+      </div>
+
+      <button class="btn ghost" id="qmCloseBtn" style="margin-top:10px">Close</button>
+    </div>
+  </div>
+
+  <!-- GIRL'S CUSTOM QUESTION SETUP MODAL -->
+  <div id="editQuestionModal" class="modal hidden">
+    <div class="box">
+      <h3 style="color:var(--maroon);margin-bottom:6px">🎯 Custom Match Question</h3>
+      <p class="sub" style="font-size:13px;line-height:1.4;margin-bottom:12px">
+        Set a question that boys must answer before matching with you. They will only have <b>Yes</b> or <b>No</b> as options.
+      </p>
+      
+      <label style="font-size:12px;font-weight:600;color:var(--maroon);text-transform:uppercase;letter-spacing:.5px">Your Question</label>
+      <textarea id="eqText" rows="3" maxlength="200" placeholder="e.g., Do you know traditional 3-taali Garba?" style="width:100%;border-radius:12px;padding:10px 12px;border:1px solid #d9c9a8;font-family:inherit;font-size:14px;margin:6px 0 14px;resize:none;box-sizing:border-box"></textarea>
+      
+      <label style="font-size:12px;font-weight:600;color:var(--maroon);text-transform:uppercase;letter-spacing:.5px">Required / Expected Answer</label>
+      <div style="display:flex;gap:20px;margin:8px 0 16px">
+        <label style="font-size:15px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="eqAnswerRadio" value="Yes" checked> <b>Yes</b></label>
+        <label style="font-size:15px;display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="eqAnswerRadio" value="No"> <b>No</b></label>
+      </div>
+
+      <button class="btn" id="eqSaveBtn">Save Question</button>
+      <button class="btn ghost" id="eqRemoveBtn" style="color:#d7263d;border-color:#d7263d">Remove Question</button>
+      <button class="btn ghost" id="eqCancelBtn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- LOCKED CHAT INFO MODAL -->
+  <div id="lockedChatModal" class="modal hidden">
+    <div class="box center">
+      <div style="font-size:48px;margin-bottom:8px">🔒</div>
+      <h3 style="color:var(--maroon);margin-bottom:6px">Chat Locked</h3>
+      <p id="lcmDesc" class="sub" style="font-size:13px;line-height:1.4;margin-bottom:16px">The required match question was answered incorrectly. Chat between both users is locked.</p>
+      
+      <div class="paid-teaser-card" style="margin-bottom:14px">
+        <span class="paid-pill">⚡ Future Feature</span>
+        <div style="font-weight:600;font-size:14px;color:var(--maroon);margin:4px 0">💳 Paid Chat Unlock</div>
+        <p style="font-size:12px;color:#6b5a50;margin:0 0 8px">Direct paid unlock functionality will be enabled soon. You will be able to unlock this conversation instantly!</p>
+        <button class="btn ghost sm" disabled style="opacity:.6;cursor:not-allowed">Pay to Unlock (Coming Soon)</button>
+      </div>
+
+      <button class="btn ghost" id="lcmCloseBtn">Close</button>
+    </div>
+  </div>
 
   <!-- CHAT -->
   <div id="chatModal" class="hidden">

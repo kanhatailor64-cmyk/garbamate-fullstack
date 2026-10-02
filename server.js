@@ -29,7 +29,8 @@ const pub = u => (!u ? null : {
   bio: u.bio,
   photo: u.photo,
   emoji: u.emoji,
-  hue: u.hue
+  hue: u.hue,
+  custom_question: u.custom_question || ''
 });
 const sign = u => jwt.sign({ id: u.id }, SECRET, { expiresIn: '30d' });
 const used = async id => {
@@ -38,7 +39,7 @@ const used = async id => {
 };
 const matched = async (x, y) => {
   const [a, b] = [x, y].sort((p, q) => p - q);
-  const row = await db.get('SELECT 1 FROM matches WHERE a=? AND b=?', [a, b]);
+  const row = await db.get('SELECT 1 FROM matches WHERE a=? AND b=? AND (status="unlocked" OR unlocked_by_paid=1)', [a, b]);
   return !!row;
 };
 const clean = t => t.replace(/\b(fuck|shit|bitch|asshole|bastard)\b/gi, '***');
@@ -159,14 +160,24 @@ app.post('/api/login', rate, async (req, res) => {
 /* ---------- profile ---------- */
 app.get('/api/me', auth, async (req, res) => {
   const swipedToday = await used(req.user.id);
-  res.json({ user: pub(req.user), left: LIMIT - swipedToday });
+  res.json({
+    user: {
+      ...pub(req.user),
+      custom_question: req.user.custom_question || '',
+      expected_answer: req.user.expected_answer || 'Yes'
+    },
+    left: LIMIT - swipedToday
+  });
 });
 
 app.put('/api/me', auth, async (req, res) => {
   const b = req.body, u = req.user;
   const photo = typeof b.photo === 'string' && /^data:image\/(jpeg|png|webp);base64,/.test(b.photo) && b.photo.length < 600000 ? b.photo : u.photo;
+  const customQuestion = b.custom_question !== undefined ? str(b.custom_question, 200).trim() : (u.custom_question || '');
+  const expectedAnswer = b.expected_answer !== undefined ? (String(b.expected_answer).trim().toLowerCase() === 'no' ? 'No' : 'Yes') : (u.expected_answer || 'Yes');
+
   await db.run(
-    'UPDATE users SET name=?,bio=?,college=?,city=?,state=?,skill=?,style=?,photo=? WHERE id=?',
+    'UPDATE users SET name=?,bio=?,college=?,city=?,state=?,skill=?,style=?,photo=?,custom_question=?,expected_answer=? WHERE id=?',
     [
       str(b.name, 40) || u.name,
       b.bio === undefined ? u.bio : str(b.bio, 150),
@@ -176,11 +187,37 @@ app.put('/api/me', auth, async (req, res) => {
       SKILLS.includes(b.skill) ? b.skill : u.skill,
       STYLES.includes(b.style) ? b.style : u.style,
       photo,
+      customQuestion,
+      expectedAnswer,
       u.id
     ]
   );
   const updated = await db.get('SELECT * FROM users WHERE id=?', [u.id]);
-  res.json({ user: pub(updated) });
+  res.json({
+    user: {
+      ...pub(updated),
+      custom_question: updated.custom_question || '',
+      expected_answer: updated.expected_answer || 'Yes'
+    }
+  });
+});
+
+app.put('/api/me/question', auth, async (req, res) => {
+  const me = req.user;
+  const question = str(req.body.question || '', 200).trim();
+  const rawExpected = String(req.body.expected_answer || 'Yes').trim().toLowerCase();
+  const expectedAnswer = rawExpected === 'no' ? 'No' : 'Yes';
+
+  await db.run('UPDATE users SET custom_question=?, expected_answer=? WHERE id=?', [question, expectedAnswer, me.id]);
+  const updated = await db.get('SELECT * FROM users WHERE id=?', [me.id]);
+  res.json({
+    ok: true,
+    user: {
+      ...pub(updated),
+      custom_question: updated.custom_question || '',
+      expected_answer: updated.expected_answer || 'Yes'
+    }
+  });
 });
 
 app.delete('/api/me', auth, async (req, res) => {
@@ -218,20 +255,60 @@ app.post('/api/swipe', auth, async (req, res) => {
   if (n >= LIMIT) return res.status(429).json({ error: 'Daily swipe limit reached. Come back tomorrow!' });
 
   let match = false;
+  let matchData = null;
   const swipeRes = await db.run('INSERT OR IGNORE INTO swipes(from_id,to_id,type,day) VALUES(?,?,?,?)', [me.id, t.id, type, today()]);
   if (swipeRes.changes && type !== 'pass') {
     const back = await db.get("SELECT 1 FROM swipes WHERE from_id=? AND to_id=? AND type!='pass'", [t.id, me.id]);
     if (back) {
       const [a, b] = [me.id, t.id].sort((x, y) => x - y);
-      await db.run('INSERT OR IGNORE INTO matches(a,b) VALUES(?,?)', [a, b]);
+      
+      let status = 'unlocked';
+      let question = '';
+      let expected_answer = '';
+      let target_answerer_id = 0;
+
+      if (t.gender === 'Female' && t.custom_question && t.custom_question.trim()) {
+        status = 'pending_question';
+        question = t.custom_question.trim();
+        expected_answer = t.expected_answer || 'Yes';
+        target_answerer_id = me.id;
+      } else if (me.gender === 'Female' && me.custom_question && me.custom_question.trim() && t.gender === 'Male') {
+        status = 'pending_question';
+        question = me.custom_question.trim();
+        expected_answer = me.expected_answer || 'Yes';
+        target_answerer_id = t.id;
+      }
+
+      await db.run(
+        'INSERT OR IGNORE INTO matches(a,b,status,question,expected_answer,target_answerer_id) VALUES(?,?,?,?,?,?)',
+        [a, b, status, question, expected_answer, target_answerer_id]
+      );
+
+      const mRow = await db.get('SELECT * FROM matches WHERE a=? AND b=?', [a, b]);
       match = true;
+      matchData = {
+        matchId: mRow ? mRow.id : null,
+        status: mRow ? mRow.status : status,
+        question: mRow ? mRow.question : question,
+        requiresMyAnswer: (mRow ? mRow.status === 'pending_question' && mRow.target_answerer_id === me.id : false)
+      };
     }
   }
 
   if (match) {
-    try { io.to('u' + t.id).emit('match', pub(me)); } catch (e) {}
+    try {
+      io.to('u' + t.id).emit('match', {
+        ...pub(me),
+        matchData: {
+          matchId: matchData ? matchData.matchId : null,
+          status: matchData ? matchData.status : 'unlocked',
+          question: matchData ? matchData.question : '',
+          requiresMyAnswer: (matchData && matchData.status === 'pending_question' && matchData.target_answerer_id === t.id)
+        }
+      });
+    } catch (e) {}
   }
-  res.json({ match, user: match ? pub(t) : null, left: LIMIT - n - 1 });
+  res.json({ match, user: match ? pub(t) : null, matchData, left: LIMIT - n - 1 });
 });
 
 app.post('/api/undo', auth, async (req, res) => {
@@ -251,13 +328,86 @@ app.post('/api/undo', auth, async (req, res) => {
 });
 
 /* ---------- matches + chat ---------- */
+const getMatchRecord = async (x, y) => {
+  const [a, b] = [x, y].sort((p, q) => p - q);
+  return await db.get('SELECT * FROM matches WHERE a=? AND b=?', [a, b]);
+};
+
 app.get('/api/matches', auth, async (req, res) => {
   const id = req.user.id;
   const rows = await db.all(
-    'SELECT u.* FROM matches m JOIN users u ON u.id=(CASE WHEN m.a=? THEN m.b ELSE m.a END) WHERE m.a=? OR m.b=? ORDER BY m.id DESC',
+    `SELECT m.id as match_id, m.status as match_status, m.question as match_question,
+            m.target_answerer_id, m.boy_answer, m.unlocked_by_paid,
+            u.*
+     FROM matches m
+     JOIN users u ON u.id=(CASE WHEN m.a=? THEN m.b ELSE m.a END)
+     WHERE m.a=? OR m.b=?
+     ORDER BY m.id DESC`,
     [id, id, id]
   );
-  res.json({ users: rows.map(pub) });
+  res.json({
+    users: rows.map(r => ({
+      ...pub(r),
+      matchId: r.match_id,
+      matchStatus: r.match_status || 'unlocked',
+      matchQuestion: r.match_question || '',
+      requiresMyAnswer: (r.match_status === 'pending_question' && r.target_answerer_id === id),
+      waitingForTheirAnswer: (r.match_status === 'pending_question' && r.target_answerer_id !== id),
+      unlockedByPaid: !!r.unlocked_by_paid
+    }))
+  });
+});
+
+app.post('/api/matches/:id/answer', auth, async (req, res) => {
+  const me = req.user;
+  const matchId = +req.params.id;
+  const raw = String(req.body.answer || '').trim().toLowerCase();
+
+  if (!['yes', 'no'].includes(raw)) {
+    return res.status(400).json({ error: "Answer must be strictly 'Yes' or 'No'." });
+  }
+  const answer = raw === 'yes' ? 'Yes' : 'No';
+
+  const m = await db.get('SELECT * FROM matches WHERE id=? AND (a=? OR b=?)', [matchId, me.id, me.id]);
+  if (!m) return res.status(404).json({ error: 'Match not found.' });
+
+  if (m.status !== 'pending_question') {
+    return res.status(400).json({ error: `This match is already ${m.status}.` });
+  }
+
+  if (m.target_answerer_id && m.target_answerer_id !== me.id) {
+    return res.status(403).json({ error: 'Only the designated partner can answer this question.' });
+  }
+
+  const partnerId = m.a === me.id ? m.b : m.a;
+  const isCorrect = answer.toLowerCase() === String(m.expected_answer || 'Yes').trim().toLowerCase();
+  const newStatus = isCorrect ? 'unlocked' : 'locked';
+
+  await db.run('UPDATE matches SET status=?, boy_answer=? WHERE id=?', [newStatus, answer, m.id]);
+
+  try {
+    io.to('u' + partnerId).emit('match_status_change', {
+      matchId: m.id,
+      status: newStatus,
+      byUserId: me.id
+    });
+  } catch (e) {}
+
+  res.json({
+    ok: isCorrect,
+    status: newStatus,
+    message: isCorrect
+      ? 'Correct answer! Match confirmed and chat unlocked.'
+      : 'Answer did not match the required answer. Chat is locked.'
+  });
+});
+
+app.post('/api/matches/:id/unlock-paid', auth, async (req, res) => {
+  res.json({
+    ok: false,
+    futureFeature: true,
+    message: 'Paid chat unlock will be available in an upcoming update.'
+  });
 });
 
 app.delete('/api/matches/:id', auth, async (req, res) => {
@@ -268,7 +418,15 @@ app.delete('/api/matches/:id', auth, async (req, res) => {
 
 app.get('/api/messages/:id', auth, async (req, res) => {
   const me = req.user.id, o = +req.params.id;
-  if (!(await matched(me, o))) return res.status(403).json({ error: 'You can only chat with matches.' });
+  const m = await getMatchRecord(me, o);
+  if (!m) return res.status(403).json({ error: 'You can only chat with matches.' });
+  if (m.status !== 'unlocked' && !m.unlocked_by_paid) {
+    return res.status(403).json({
+      error: m.status === 'locked'
+        ? 'Chat is locked because the question answer did not match.'
+        : 'Chat is locked until the match question is answered.'
+    });
+  }
   const rows = await db.all(
     'SELECT * FROM messages WHERE (from_id=? AND to_id=?) OR (from_id=? AND to_id=?) ORDER BY id',
     [me, o, o, me]
@@ -280,7 +438,15 @@ app.post('/api/messages', auth, async (req, res) => {
   const me = req.user, to = +req.body.to, text = clean(str(req.body.text, 500));
   if (!text) return res.status(400).json({ error: 'Type a message first.' });
   const t = await db.get('SELECT * FROM users WHERE id=?', [to]);
-  if (!t || !(await matched(me.id, to))) return res.status(403).json({ error: 'You can only chat with matches.' });
+  const matchRec = await getMatchRecord(me.id, to);
+  if (!t || !matchRec) return res.status(403).json({ error: 'You can only chat with matches.' });
+  if (matchRec.status !== 'unlocked' && !matchRec.unlocked_by_paid) {
+    return res.status(403).json({
+      error: matchRec.status === 'locked'
+        ? 'Chat is locked because the question answer did not match.'
+        : 'Chat is locked until the match question is answered.'
+    });
+  }
 
   const now = Date.now();
   const ins = await db.run('INSERT INTO messages(from_id,to_id,text,t) VALUES(?,?,?,?)', [me.id, to, text, now]);

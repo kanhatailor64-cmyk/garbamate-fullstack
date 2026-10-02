@@ -58,16 +58,28 @@ const db = {
         emoji TEXT DEFAULT '💃',
         hue INT,
         banned INT DEFAULT 0,
-        undo_day TEXT
+        undo_day TEXT,
+        custom_question TEXT DEFAULT '',
+        expected_answer TEXT DEFAULT 'Yes'
       );
     `);
     await c.execute(`CREATE TABLE IF NOT EXISTS swipes(id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INT, to_id INT, type TEXT, day TEXT, UNIQUE(from_id, to_id));`);
-    await c.execute(`CREATE TABLE IF NOT EXISTS matches(id INTEGER PRIMARY KEY AUTOINCREMENT, a INT, b INT, UNIQUE(a, b));`);
+    await c.execute(`CREATE TABLE IF NOT EXISTS matches(id INTEGER PRIMARY KEY AUTOINCREMENT, a INT, b INT, status TEXT DEFAULT 'unlocked', question TEXT DEFAULT '', expected_answer TEXT DEFAULT '', boy_answer TEXT DEFAULT '', target_answerer_id INT DEFAULT 0, unlocked_by_paid INT DEFAULT 0, UNIQUE(a, b));`);
     await c.execute(`CREATE TABLE IF NOT EXISTS messages(id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INT, to_id INT, text TEXT, t INT);`);
     await c.execute(`CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY AUTOINCREMENT, by_id INT, against_id INT, reason TEXT, t INT);`);
     await c.execute(`CREATE INDEX IF NOT EXISTS i_sw ON swipes(from_id, to_id);`);
     await c.execute(`CREATE INDEX IF NOT EXISTS i_msg ON messages(from_id, to_id);`);
     await c.execute(`CREATE INDEX IF NOT EXISTS i_col ON users(college, city);`);
+
+    // Safe column migrations for existing databases
+    try { await c.execute("ALTER TABLE users ADD COLUMN custom_question TEXT DEFAULT ''"); } catch(e){}
+    try { await c.execute("ALTER TABLE users ADD COLUMN expected_answer TEXT DEFAULT 'Yes'"); } catch(e){}
+    try { await c.execute("ALTER TABLE matches ADD COLUMN status TEXT DEFAULT 'unlocked'"); } catch(e){}
+    try { await c.execute("ALTER TABLE matches ADD COLUMN question TEXT DEFAULT ''"); } catch(e){}
+    try { await c.execute("ALTER TABLE matches ADD COLUMN expected_answer TEXT DEFAULT ''"); } catch(e){}
+    try { await c.execute("ALTER TABLE matches ADD COLUMN boy_answer TEXT DEFAULT ''"); } catch(e){}
+    try { await c.execute("ALTER TABLE matches ADD COLUMN target_answerer_id INT DEFAULT 0"); } catch(e){}
+    try { await c.execute("ALTER TABLE matches ADD COLUMN unlocked_by_paid INT DEFAULT 0"); } catch(e){}
   },
 
   async get(sql, args = []) {
